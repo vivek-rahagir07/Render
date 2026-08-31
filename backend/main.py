@@ -69,7 +69,7 @@ async def create_reconstruction_job(
     image_size: int = Form(512),
     device: str = Form("mps"),
     max_bs: int = Form(1),
-    num_refinements_iterations: int = Form(5),
+    num_refinements_iterations: int = Form(8),
     execution_mode: str = Form("retrieval"),
     cam_size: float = Form(0.05)
 ):

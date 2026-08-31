@@ -34,7 +34,7 @@ class JobConfig:
     image_size: int = 512
     device: str = "mps"
     max_bs: int = 1
-    num_refinements_iterations: int = 5
+    num_refinements_iterations: int = 8
     execution_mode: str = "retrieval"
     cam_size: float = 0.05
     render_once: bool = False

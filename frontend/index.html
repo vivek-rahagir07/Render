@@ -3,39 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Render 3D — Local MUSt3R Neural Reconstruction</title>
-  <meta name="description" content="Local-first 3D reconstruction web app powered by MUSt3R and PyTorch MPS on Apple Silicon.">
+  <title>Render 3D — Neural Multi-View Photogrammetry Studio</title>
+  <meta name="description" content="State-of-the-art neural 3D scene reconstruction powered by MUSt3R and Apple Silicon MPS GPU.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Three.js, OrbitControls, GLTFLoader, and PLYLoader via CDN -->
+  <!-- Three.js and loaders -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/PLYLoader.js"></script>
 </head>
 <body>
+  <!-- Ambient Background Glows -->
+  <div class="ambient-glow glow-top-left"></div>
+  <div class="ambient-glow glow-top-right"></div>
+  <div class="ambient-glow glow-bottom-center"></div>
+
   <div class="app-layout">
-    <!-- Header -->
+    <!-- Navigation Header -->
     <header class="app-header">
       <div class="header-left">
-        <div class="logo-badge">
-          <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-            <polyline points="2 17 12 22 22 17"></polyline>
-            <polyline points="2 12 12 17 22 12"></polyline>
-          </svg>
-          <span class="logo-text">Render<span class="highlight">3D</span></span>
-        </div>
-        <span class="badge-subtitle">MUSt3R Local Engine</span>
+        <a href="#" class="brand-link" id="brand-home-link">
+          <div class="logo-orb">
+            <svg class="logo-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+          </div>
+          <div class="brand-text-group">
+            <span class="logo-text">Render<span class="highlight-gradient">3D</span></span>
+            <span class="badge-engine">Neural Studio</span>
+          </div>
+        </a>
+      </div>
+
+      <div class="header-center">
+        <nav class="nav-pills">
+          <button type="button" id="nav-btn-create" class="nav-pill active">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="16"></line>
+              <line x1="8" y1="12" x2="16" y2="12"></line>
+            </svg>
+            <span>Reconstruct</span>
+          </button>
+          <button type="button" id="nav-btn-viewer" class="nav-pill" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+              <polyline points="2 17 12 22 22 17"></polyline>
+              <polyline points="2 12 12 17 22 12"></polyline>
+            </svg>
+            <span>3D Viewport</span>
+          </button>
+        </nav>
       </div>
 
       <div class="header-right">
-        <div id="system-status-pill" class="status-pill status-loading" title="Checking local engine status...">
+        <div id="system-status-pill" class="status-pill status-loading" title="Checking local inference hardware...">
           <span class="status-dot"></span>
           <span id="status-pill-text">Checking System...</span>
         </div>
+        <a href="https://github.com/vivek-rahagir07/Render" target="_blank" rel="noopener noreferrer" class="github-btn" title="View Source on GitHub">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+        </a>
       </div>
     </header>
 
@@ -44,24 +79,47 @@
       
       <!-- STEP 1: Upload & Configure Section -->
       <section id="upload-section" class="view-panel active">
-        <div class="panel-header">
-          <h1 class="panel-title">Upload Image Sequence</h1>
-          <p class="panel-desc">Reconstruct full 3D point clouds and scenes from multi-view photographs using local MUSt3R neural inference.</p>
+        
+        <!-- Hero Header -->
+        <div class="hero-banner">
+          <div class="hero-tag">
+            <span class="hero-tag-dot"></span>
+            <span>Local Neural Photogrammetry • Apple Silicon MPS</span>
+          </div>
+          <h1 class="hero-title">
+            Transform Photos into <span class="highlight-gradient">Photorealistic 3D</span>
+          </h1>
+          <p class="hero-subtitle">
+            Reconstruct dense 3D point clouds, precise camera trajectories, and clean geometry directly on your Mac using state-of-the-art neural feature matching.
+          </p>
         </div>
 
-        <!-- 3D Capture Guide Banner -->
-        <div class="guidance-banner">
-          <div class="guidance-icon">📸</div>
-          <div class="guidance-content">
-            <strong>How to get true 3D models (not flat squares):</strong>
-            <p style="margin: 4px 0 0 0; opacity: 0.9; font-size: 0.84rem;">
-              Walk around a <strong>physical 3D object or room</strong> taking <strong>15–40 overlapping photos</strong> from different angles. 
-              <em style="color: #fca5a5;">Note: Uploading flat 2D screenshots will produce flat square 2D planes in 3D space.</em>
-            </p>
+        <!-- Visual 3D Capture Guide Cards -->
+        <div class="guide-cards-grid">
+          <div class="guide-card">
+            <div class="guide-card-icon">🔄</div>
+            <div class="guide-card-content">
+              <h3 class="guide-card-title">1. Orbit 360° Around Subject</h3>
+              <p class="guide-card-text">Walk around physical objects (chairs, shoes, rooms, statues) taking shots at 15°–30° steps.</p>
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-icon">📐</div>
+            <div class="guide-card-content">
+              <h3 class="guide-card-title">2. 60–80% Image Overlap</h3>
+              <p class="guide-card-text">Ensure consecutive frames share prominent visual details so the neural matcher locks geometry.</p>
+            </div>
+          </div>
+          <div class="guide-card">
+            <div class="guide-card-icon">💡</div>
+            <div class="guide-card-content">
+              <h3 class="guide-card-title">3. Avoid 2D Flat Screens</h3>
+              <p class="guide-card-text">Avoid 2D desktop screenshots. Real-world texture and parallax produce rich, dense depth.</p>
+            </div>
           </div>
         </div>
 
-        <!-- Dropzone -->
+        <!-- Dropzone Area -->
         <div id="dropzone" class="dropzone-area">
           <input type="file" id="file-input" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="file-input-hidden">
           <div class="dropzone-content">
@@ -72,8 +130,8 @@
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
             </div>
-            <h3 class="dropzone-heading">Drag & drop photos here, or <button type="button" id="browse-btn" class="text-link">browse files</button></h3>
-            <p class="dropzone-sub">Supports JPG, PNG, and WEBP formats • 15–40 multi-view photos recommended</p>
+            <h3 class="dropzone-heading">Drop multi-view photographs here, or <button type="button" id="browse-btn" class="text-link">browse files</button></h3>
+            <p class="dropzone-sub">Supports JPG, PNG, and WEBP formats • Recommended: 15–40 images per scene</p>
           </div>
         </div>
 
@@ -82,7 +140,7 @@
           <div class="gallery-toolbar">
             <div class="gallery-count-badge">
               <span id="image-count-num">0</span> images selected
-              <span id="image-count-advice" class="count-advice">(Recommend 20–40)</span>
+              <span id="image-count-advice" class="count-advice">(Recommend 15–40)</span>
             </div>
             <button id="clear-all-btn" class="btn btn-secondary btn-sm" type="button">Clear All</button>
           </div>
@@ -92,7 +150,7 @@
           </div>
         </div>
 
-        <!-- Advanced Configuration (Collapsible) -->
+        <!-- Advanced Configuration Card -->
         <div class="settings-card">
           <button type="button" id="settings-toggle" class="settings-toggle-btn" aria-expanded="false">
             <div class="toggle-title">
@@ -100,7 +158,7 @@
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
               </svg>
-              <span>Reconstruction Parameters</span>
+              <span>Precision Parameters & Pipeline Tuning</span>
             </div>
             <span class="toggle-arrow">▾</span>
           </button>
@@ -108,48 +166,48 @@
           <div id="settings-content" class="settings-content hidden">
             <div class="form-grid">
               <div class="form-group">
-                <label for="cfg-image-size" class="form-label">Image Resolution</label>
+                <label for="cfg-image-size" class="form-label">Neural Backbone Resolution</label>
                 <select id="cfg-image-size" class="form-select">
-                  <option value="512" selected>512px (High Fidelity / Default)</option>
-                  <option value="224">224px (Fast Preview)</option>
+                  <option value="512" selected>512px (Ultra High Precision / Recommended)</option>
+                  <option value="224">224px (Fast Low-VRAM Preview)</option>
                 </select>
-                <span class="field-hint">512px produces superior point cloud density</span>
+                <span class="field-hint">512px yields maximum depth detail and dense point counts</span>
               </div>
 
               <div class="form-group">
-                <label for="cfg-iterations" class="form-label">Refinement Iterations: <span id="iter-val">5</span></label>
-                <input type="range" id="cfg-iterations" min="1" max="15" value="5" class="form-range">
-                <span class="field-hint">Higher values improve global geometric alignment</span>
+                <label for="cfg-iterations" class="form-label">Refinement Iterations: <span id="iter-val">8</span></label>
+                <input type="range" id="cfg-iterations" min="1" max="15" value="8" class="form-range">
+                <span class="field-hint">Higher iterations refine global alignment and camera calibration</span>
               </div>
 
               <div class="form-group">
-                <label for="cfg-mode" class="form-label">Matching Execution Mode</label>
+                <label for="cfg-mode" class="form-label">Pose Optimization Strategy</label>
                 <select id="cfg-mode" class="form-select">
-                  <option value="retrieval" selected>Retrieval (Unordered Photos / 360° Loop)</option>
-                  <option value="linseq">Sequential (Continuous Video Frames)</option>
+                  <option value="retrieval" selected>Global Retrieval (Unordered Photos / 360° Orbit)</option>
+                  <option value="linseq">Sequential Tracking (Video Frame Stream)</option>
                 </select>
-                <span class="field-hint">Retrieval pairs overlapping camera angles automatically</span>
+                <span class="field-hint">Retrieval discovers optimal camera pairings globally</span>
               </div>
 
               <div class="form-group">
-                <label for="cfg-device" class="form-label">Hardware Acceleration</label>
+                <label for="cfg-device" class="form-label">Inference Hardware</label>
                 <select id="cfg-device" class="form-select">
-                  <option value="mps" selected>Apple Silicon (MPS GPU)</option>
+                  <option value="mps" selected>Apple Silicon Metal (MPS GPU Acceleration)</option>
                   <option value="cpu">CPU (Fallback)</option>
                 </select>
-                <span class="field-hint">MPS uses unified memory for fast tensor compute</span>
+                <span class="field-hint">Accelerated via Apple Silicon unified memory</span>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Submit Button -->
+        <!-- Submit Button Footer -->
         <div class="action-footer">
           <button type="button" id="generate-btn" class="btn btn-primary btn-lg" disabled>
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
-            <span>Start 3D Reconstruction</span>
+            <span>Start Neural 3D Reconstruction</span>
           </button>
         </div>
       </section>
@@ -206,7 +264,7 @@
           <div class="terminal-panel">
             <div class="terminal-header">
               <span class="terminal-title">Console Output</span>
-              <span class="terminal-badge">LIVE</span>
+              <span class="terminal-badge">LIVE INFERENCE</span>
             </div>
             <div id="terminal-logs" class="terminal-body">
               <div class="log-line info">[System] Initializing MUSt3R process...</div>
@@ -233,7 +291,7 @@
           <!-- Top Viewer Header -->
           <div class="viewer-top-bar">
             <div class="viewer-meta-info">
-              <h2 class="viewer-scene-title">3D Neural Reconstruction</h2>
+              <h2 class="viewer-scene-title">3D Scene Studio</h2>
               <span id="viewer-stats-badge" class="stats-badge">Point Cloud Scene • Ready</span>
             </div>
 
@@ -243,6 +301,14 @@
                 <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">View GLB</button>
                 <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">View PLY</button>
               </div>
+
+              <button type="button" id="snapshot-btn" class="btn btn-secondary btn-sm" title="Capture High-Res Snapshot">
+                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+                Snap
+              </button>
 
               <button type="button" id="download-glb-btn" class="btn btn-primary btn-sm">
                 <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -280,14 +346,14 @@
               <span>Reset</span>
             </button>
 
-            <button type="button" id="btn-auto-rotate" class="dock-btn" title="Toggle Turntable Auto-Rotation">
+            <button type="button" id="btn-auto-rotate" class="dock-btn" title="Toggle 360° Turntable Rotation">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
               </svg>
               <span>Turntable</span>
             </button>
 
-            <button type="button" id="btn-toggle-grid" class="dock-btn active" title="Toggle Reference Grid">
+            <button type="button" id="btn-toggle-grid" class="dock-btn active" title="Toggle Reference Floor Grid">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="3" y1="9" x2="21" y2="9"></line>
@@ -298,7 +364,7 @@
               <span>Grid</span>
             </button>
 
-            <button type="button" id="btn-point-style" class="dock-btn active" title="Toggle Smooth Circular Splats vs Crisp Points">
+            <button type="button" id="btn-point-style" class="dock-btn active" title="Toggle Smooth Gaussian Splats vs Sharp Points">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="8"></circle>
                 <circle cx="12" cy="12" r="3"></circle>
@@ -311,7 +377,7 @@
                 <circle cx="12" cy="12" r="5"></circle>
                 <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
               </svg>
-              <span>Theme</span>
+              <span>Atmosphere</span>
             </button>
 
             <button type="button" id="btn-toggle-cams" class="dock-btn" title="Toggle Camera Positions">
@@ -322,19 +388,29 @@
               <span>Cameras</span>
             </button>
 
+            <button type="button" id="btn-fullscreen" class="dock-btn" title="Toggle Fullscreen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <polyline points="9 21 3 21 3 15"></polyline>
+                <line x1="21" y1="3" x2="14" y2="10"></line>
+                <line x1="3" y1="21" x2="10" y2="14"></line>
+              </svg>
+              <span>Fullscreen</span>
+            </button>
+
             <div class="dock-divider"></div>
 
             <div class="dock-slider-group">
-              <label for="point-size-slider" class="dock-label">Size: <span id="point-size-val">3.0</span></label>
-              <input type="range" id="point-size-slider" min="0.5" max="12" value="3.0" step="0.5" class="dock-slider">
+              <label for="point-size-slider" class="dock-label">Density: <span id="point-size-val">1.0x</span></label>
+              <input type="range" id="point-size-slider" min="0.2" max="3.0" value="1.0" step="0.1" class="dock-slider">
             </div>
           </div>
 
           <!-- Mouse Interaction Hints -->
           <div class="viewer-hints">
-            <span>🖱️ Left Click: Orbit</span>
+            <span>🖱️ Left: Orbit</span>
             <span>•</span>
-            <span>Right Click: Pan</span>
+            <span>Right: Pan</span>
             <span>•</span>
             <span>Scroll: Zoom</span>
           </div>

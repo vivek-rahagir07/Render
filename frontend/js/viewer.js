@@ -2,12 +2,13 @@
  * Advanced Three.js 3D Viewer module for GLTF/GLB and PLY point clouds & meshes
  * 
  * Features:
- *   - Soft Gaussian-style circular point splats (eliminating harsh square pixels)
+ *   - Soft Gaussian-style circular point splats (calibrated to bounding radius)
  *   - Both GLB and PLY direct rendering
  *   - Turntable smooth auto-rotation
- *   - Studio environment & lighting modes
- *   - Camera frustum toggle (hidden by default)
- *   - Real-time point size and splat style tuning
+ *   - Studio environment & atmosphere modes
+ *   - High-Res Snapshot Export
+ *   - Fullscreen viewport
+ *   - Real-time point density & splat style tuning
  */
 class ModelViewer {
   constructor(containerId) {
@@ -17,12 +18,12 @@ class ModelViewer {
     this.renderer = null;
     this.controls = null;
     this.gridHelper = null;
-    this.groundDisc = null;
     this.currentModel = null;
     this.initialCameraState = null;
+    this.sceneBoundingRadius = 1.5;
     
     // Config states
-    this.pointSize = 3.0;
+    this.pointSize = 1.0; // Scaled multiplier (0.2x to 3.0x)
     this.pointStyle = 'smooth'; // 'smooth' (splats) or 'sharp' (raw points)
     this.showCameraFrustums = false;
     this.isAutoRotating = false;
@@ -80,7 +81,7 @@ class ModelViewer {
     this.camera.position.set(0, 1.5, 3.5);
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputEncoding = THREE.sRGBEncoding;
@@ -147,15 +148,11 @@ class ModelViewer {
 
   /**
    * Load either a GLB scene or a PLY point cloud model
-   * @param {string} url
-   * @param {Function} onProgress
-   * @param {string} format 'glb' or 'ply'
    */
   async loadModel(url, onProgress = null, format = 'glb') {
     const loadingOverlay = document.getElementById('viewer-loading-overlay');
     if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
-    // Remove previous model
     if (this.currentModel) {
       this.scene.remove(this.currentModel);
       this.currentModel = null;
@@ -184,6 +181,8 @@ class ModelViewer {
             this.scene.add(this.currentModel);
             this.fitCameraToModel(this.currentModel);
 
+            this._updateStatsBadge(geometry.attributes.position.count, 'PLY');
+
             if (loadingOverlay) loadingOverlay.classList.add('hidden');
             resolve({ scene: this.currentModel, type: 'ply' });
           },
@@ -208,6 +207,14 @@ class ModelViewer {
             this.scene.add(this.currentModel);
             this.fitCameraToModel(this.currentModel);
 
+            let totalPoints = 0;
+            this._pointObjects.forEach(p => {
+              if (p.geometry && p.geometry.attributes.position) {
+                totalPoints += p.geometry.attributes.position.count;
+              }
+            });
+            this._updateStatsBadge(totalPoints, 'GLB');
+
             if (loadingOverlay) loadingOverlay.classList.add('hidden');
             resolve(gltf);
           },
@@ -226,13 +233,21 @@ class ModelViewer {
     });
   }
 
+  _updateStatsBadge(pointCount, format) {
+    const statsBadge = document.getElementById('viewer-stats-badge');
+    if (statsBadge) {
+      const formattedCount = pointCount > 0 ? `${(pointCount / 1000).toFixed(1)}k Points` : '3D Geometry';
+      statsBadge.textContent = `${format} • ${formattedCount} • High Precision`;
+    }
+  }
+
   /**
-   * Builds custom PointsMaterial with either smooth circular splats or crisp points
+   * Builds custom PointsMaterial with smooth circular splats or crisp points
    */
   _createPointMaterial(hasVertexColors = true) {
     const isSmooth = this.pointStyle === 'smooth';
     const baseRadius = this.sceneBoundingRadius || 1.5;
-    const computedSize = Math.max(0.002, baseRadius * 0.007 * (this.pointSize / 3.0));
+    const computedSize = Math.max(0.002, baseRadius * 0.007 * this.pointSize);
 
     return new THREE.PointsMaterial({
       size: computedSize,
@@ -261,7 +276,7 @@ class ModelViewer {
         return;
       }
 
-      // Handle camera frustum meshes (they appear as pyramids/boxes)
+      // Handle camera frustum meshes
       if (child.isMesh && child.geometry) {
         const vertexCount = child.geometry.attributes.position
           ? child.geometry.attributes.position.count
@@ -270,7 +285,6 @@ class ModelViewer {
         if (vertexCount > 0 && vertexCount <= CAMERA_FRUSTUM_MAX_VERTICES) {
           child.visible = this.showCameraFrustums;
           child.userData.isCameraFrustum = true;
-          // Wireframe material for cleaner look when toggled on
           if (child.material) {
             child.material.wireframe = true;
             child.material.color = new THREE.Color(0x38bdf8);
@@ -388,10 +402,34 @@ class ModelViewer {
     return this.showCameraFrustums;
   }
 
+  toggleFullscreen() {
+    const viewerElem = document.getElementById('viewer-section');
+    if (!document.fullscreenElement) {
+      if (viewerElem && viewerElem.requestFullscreen) {
+        viewerElem.requestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+      }
+    }
+    setTimeout(() => this.onResize(), 150);
+  }
+
+  captureScreenshot() {
+    if (!this.renderer || !this.scene || !this.camera) return;
+    this.renderer.render(this.scene, this.camera);
+    const dataUrl = this.renderer.domElement.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = `render3d_snapshot_${Date.now()}.png`;
+    a.click();
+  }
+
   updatePointSize(size) {
     this.pointSize = parseFloat(size);
     const baseRadius = this.sceneBoundingRadius || 1.5;
-    const computedSize = Math.max(0.002, baseRadius * 0.007 * (this.pointSize / 3.0));
+    const computedSize = Math.max(0.002, baseRadius * 0.007 * this.pointSize);
 
     this._pointObjects.forEach((pointsObj) => {
       if (pointsObj.material) {

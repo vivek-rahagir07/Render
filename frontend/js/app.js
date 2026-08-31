@@ -50,11 +50,17 @@ document.addEventListener('DOMContentLoaded', () => {
   const terminalLogs = document.getElementById('terminal-logs');
   const cancelJobBtn = document.getElementById('cancel-job-btn');
 
+  // Nav & Header Elements
+  const navBtnCreate = document.getElementById('nav-btn-create');
+  const navBtnViewer = document.getElementById('nav-btn-viewer');
+  const brandHomeLink = document.getElementById('brand-home-link');
+
   // Viewer Elements
   const downloadGlbBtn = document.getElementById('download-glb-btn');
   const downloadPlyBtn = document.getElementById('download-ply-btn');
   const viewGlbBtn = document.getElementById('view-glb-btn');
   const viewPlyBtn = document.getElementById('view-ply-btn');
+  const snapshotBtn = document.getElementById('snapshot-btn');
   const newReconBtn = document.getElementById('new-recon-btn');
   const btnResetCam = document.getElementById('btn-reset-cam');
   const btnAutoRotate = document.getElementById('btn-auto-rotate');
@@ -63,6 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const pointStyleLabel = document.getElementById('point-style-label');
   const btnToggleBg = document.getElementById('btn-toggle-bg');
   const btnToggleCams = document.getElementById('btn-toggle-cams');
+  const btnFullscreen = document.getElementById('btn-fullscreen');
   const pointSizeSlider = document.getElementById('point-size-slider');
   const pointSizeVal = document.getElementById('point-size-val');
 
@@ -224,14 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     iterVal.textContent = e.target.value;
   });
 
-  // --- View Switcher ---
-  function showView(viewId) {
-    [uploadSection, processingSection, viewerSection].forEach(sec => {
-      sec.classList.remove('active');
-    });
-    const target = document.getElementById(viewId);
-    if (target) target.classList.add('active');
-  }
+
 
   // --- Generation / Reconstruction Trigger ---
   generateBtn.addEventListener('click', async () => {
@@ -389,6 +389,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  function showView(viewId) {
+    [uploadSection, processingSection, viewerSection].forEach(section => {
+      if (section) section.classList.remove('active');
+    });
+    const target = document.getElementById(viewId);
+    if (target) target.classList.add('active');
+
+    if (navBtnCreate && navBtnViewer) {
+      if (viewId === 'viewer-section') {
+        navBtnCreate.classList.remove('active');
+        navBtnViewer.classList.add('active');
+        navBtnViewer.disabled = false;
+      } else {
+        navBtnCreate.classList.add('active');
+        navBtnViewer.classList.remove('active');
+      }
+    }
+  }
+
+  if (navBtnCreate) {
+    navBtnCreate.addEventListener('click', () => showView('upload-section'));
+  }
+  if (navBtnViewer) {
+    navBtnViewer.addEventListener('click', () => {
+      if (!navBtnViewer.disabled) {
+        showView('viewer-section');
+        state.viewer.onResize();
+      }
+    });
+  }
+  if (brandHomeLink) {
+    brandHomeLink.addEventListener('click', (e) => {
+      e.preventDefault();
+      showView('upload-section');
+    });
+  }
+
   // --- On Job Completed ---
   async function onJobCompleted(job) {
     showView('viewer-section');
@@ -434,9 +471,17 @@ document.addEventListener('DOMContentLoaded', () => {
     btnToggleCams.classList.toggle('active', isVisible);
   });
 
+  if (btnFullscreen) {
+    btnFullscreen.addEventListener('click', () => state.viewer.toggleFullscreen());
+  }
+
+  if (snapshotBtn) {
+    snapshotBtn.addEventListener('click', () => state.viewer.captureScreenshot());
+  }
+
   pointSizeSlider.addEventListener('input', (e) => {
     const val = parseFloat(e.target.value).toFixed(1);
-    if (pointSizeVal) pointSizeVal.textContent = val;
+    if (pointSizeVal) pointSizeVal.textContent = `${val}x`;
     state.viewer.updatePointSize(val);
   });
 
