@@ -1,0 +1,24 @@
+# Storage and temporary data
+storage/jobs/*
+!storage/jobs/.gitkeep
+*.log
+scratch/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Environment variables
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db
