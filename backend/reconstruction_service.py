@@ -365,6 +365,10 @@ class ReconstructionService:
         # Environment variables for subprocess
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
+        env["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+        env["OMP_NUM_THREADS"] = "1"
+        env["MKL_NUM_THREADS"] = "1"
+        env["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
         # Include must3r root in PYTHONPATH
         current_pythonpath = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = f"{self.must3r_root}:{self.must3r_root / 'dust3r'}:{current_pythonpath}"
