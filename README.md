@@ -67,18 +67,37 @@ Render/
 
 ## Quick Start
 
-### 1. Launch the Backend Server
+### 1. Prerequisites & Environment Setup
 
-Using your existing MUSt3R virtual environment:
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/vivek-rahagir07/Render.git
+   cd Render
+   ```
 
+2. **Configure Environment:**
+   Copy the example environment file and customize paths if your MUSt3R installation is in a custom directory:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Install Dependencies:**
+   Install backend requirements using your Python / MUSt3R virtual environment:
+   ```bash
+   pip install -r backend/requirements.txt
+   ```
+
+### 2. Launch the Backend Server
+
+Run the server with Uvicorn:
 ```bash
-cd /Users/vivek/Documents/GitHub/Render
-~/must3r/.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
 ```
+*(Or specify your virtualenv directly, e.g. `~/must3r/.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload`)*
 
-### 2. Open the Web Application
+### 3. Open the Web Application
 
-Navigate your browser to:
+Open your browser and navigate to:
 ```
 http://127.0.0.1:8000
 ```
