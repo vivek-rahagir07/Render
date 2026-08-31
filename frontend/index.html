@@ -277,7 +277,7 @@
         </div>
       </section>
 
-      <!-- STEP 3: 3D Model Viewer Section -->
+      <!-- STEP 3: 3D Model Viewer & Live Framing Analysis Section -->
       <section id="viewer-section" class="view-panel">
         <div class="viewer-container">
           <!-- 3D Canvas Viewport -->
@@ -291,13 +291,13 @@
           <!-- Top Viewer Header -->
           <div class="viewer-top-bar">
             <div class="viewer-meta-info">
-              <h2 class="viewer-scene-title">3D Scene Studio</h2>
-              <span id="viewer-stats-badge" class="stats-badge">Point Cloud Scene • Ready</span>
+              <h2 id="viewer-header-title" class="viewer-scene-title">3D Scene Studio</h2>
+              <span id="viewer-stats-badge" class="stats-badge">3D Point Cloud • Ready</span>
             </div>
 
             <div class="viewer-actions">
               <!-- Format Switcher -->
-              <div class="format-toggle-group">
+              <div class="format-toggle-group" id="format-toggle-group">
                 <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">View GLB</button>
                 <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">View PLY</button>
               </div>
@@ -333,6 +333,48 @@
                 </svg>
                 New Job
               </button>
+            </div>
+          </div>
+
+          <!-- Live Analysis HUD Overlay (Active during reconstruction) -->
+          <div id="live-pipeline-hud" class="live-pipeline-hud hidden">
+            <div class="hud-card">
+              <div class="hud-header">
+                <div class="hud-status-badge">
+                  <span class="hud-pulse-dot"></span>
+                  <span id="hud-stage-title">Neural Reconstruction in Progress</span>
+                </div>
+                <span id="hud-timer" class="hud-timer">00:00</span>
+              </div>
+              <p id="hud-stage-desc" class="hud-desc">Analyzing 3D camera angles & feature matches in real-time...</p>
+              
+              <!-- Mini Progress Bar -->
+              <div class="hud-progress-bar-bg">
+                <div id="hud-progress-fill" class="hud-progress-fill" style="width: 10%;"></div>
+              </div>
+
+              <!-- HUD Footer -->
+              <div class="hud-footer">
+                <button type="button" id="hud-toggle-logs-btn" class="btn btn-secondary btn-sm">
+                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="4 17 10 11 4 5"></polyline>
+                    <line x1="12" y1="19" x2="20" y2="19"></line>
+                  </svg>
+                  <span>Console Logs</span>
+                </button>
+                <button type="button" id="hud-cancel-btn" class="btn btn-danger btn-sm">Cancel</button>
+              </div>
+            </div>
+
+            <!-- Floating Live Console Drawer -->
+            <div id="hud-logs-drawer" class="hud-logs-drawer hidden">
+              <div class="drawer-header">
+                <span>Inference Output Stream</span>
+                <button type="button" id="hud-close-logs-btn" class="close-drawer-btn">✕</button>
+              </div>
+              <div id="hud-terminal-body" class="drawer-body">
+                <div class="log-line info">[MUSt3R] Ingesting multi-view images...</div>
+              </div>
             </div>
           </div>
 

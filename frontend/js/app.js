@@ -55,6 +55,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const navBtnViewer = document.getElementById('nav-btn-viewer');
   const brandHomeLink = document.getElementById('brand-home-link');
 
+  // Live HUD Elements (In 3D Viewport)
+  const livePipelineHud = document.getElementById('live-pipeline-hud');
+  const hudStageTitle = document.getElementById('hud-stage-title');
+  const hudStageDesc = document.getElementById('hud-stage-desc');
+  const hudTimer = document.getElementById('hud-timer');
+  const hudProgressFill = document.getElementById('hud-progress-fill');
+  const hudToggleLogsBtn = document.getElementById('hud-toggle-logs-btn');
+  const hudLogsDrawer = document.getElementById('hud-logs-drawer');
+  const hudCloseLogsBtn = document.getElementById('hud-close-logs-btn');
+  const hudTerminalBody = document.getElementById('hud-terminal-body');
+  const hudCancelBtn = document.getElementById('hud-cancel-btn');
+  const viewerHeaderTitle = document.getElementById('viewer-header-title');
+
   // Viewer Elements
   const downloadGlbBtn = document.getElementById('download-glb-btn');
   const downloadPlyBtn = document.getElementById('download-ply-btn');
@@ -233,7 +246,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
-  // --- Generation / Reconstruction Trigger ---
+  // --- Generation / Reconstruction Trigger with Live 3D Framing ---
   generateBtn.addEventListener('click', async () => {
     if (state.files.length < 2) return;
 
@@ -246,16 +259,24 @@ document.addEventListener('DOMContentLoaded', () => {
       cam_size: 0.05
     };
 
-    // Reset processing view UI
-    progressBarFill.style.width = '5%';
-    progressPercent.textContent = '5%';
-    processingStageText.textContent = 'Uploading Images...';
-    processingMsgText.textContent = `Transmitting ${state.files.length} images to local server...`;
-    terminalLogs.innerHTML = '<div class="log-line info">[System] Starting upload sequence...</div>';
-    resetSteppers();
-    setStepperActive(1);
+    // Transition directly to 3D Viewport with Live Framing
+    showView('viewer-section');
+    state.viewer.onResize();
+    state.viewer.setupLiveFraming(state.files);
 
-    showView('processing-section');
+    if (livePipelineHud) {
+      livePipelineHud.classList.remove('hidden');
+      hudStageTitle.textContent = 'Uploading & Mapping 3D Cameras...';
+      hudStageDesc.textContent = `Analyzing ${state.files.length} multi-view camera angles in real time...`;
+      hudProgressFill.style.width = '8%';
+      if (hudTerminalBody) {
+        hudTerminalBody.innerHTML = '<div class="log-line info">[System] Multi-view framing initialized. Starting upload...</div>';
+      }
+    }
+    if (viewerHeaderTitle) {
+      viewerHeaderTitle.textContent = 'Live Neural Analysis & Framing';
+    }
+
     startElapsedTimer();
 
     try {
@@ -266,6 +287,7 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (err) {
       stopElapsedTimer();
       alert(`Error starting reconstruction: ${err.message}`);
+      if (livePipelineHud) livePipelineHud.classList.add('hidden');
       showView('upload-section');
     }
   });
@@ -282,10 +304,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (job.status === 'completed') {
           clearInterval(state.pollTimer);
           stopElapsedTimer();
-          setTimeout(() => onJobCompleted(job), 800);
+          setTimeout(() => onJobCompleted(job), 600);
         } else if (job.status === 'failed' || job.status === 'cancelled') {
           clearInterval(state.pollTimer);
           stopElapsedTimer();
+          if (livePipelineHud) livePipelineHud.classList.add('hidden');
           alert(`Reconstruction ${job.status}: ${job.error || job.message}`);
           showView('upload-section');
         }
@@ -296,74 +319,49 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateJobProgressUI(job) {
-    progressBarFill.style.width = `${job.progress}%`;
-    progressPercent.textContent = `${job.progress}%`;
-    processingStageText.textContent = job.stage || 'Processing...';
-    processingMsgText.textContent = job.message || '';
+    // Update live HUD
+    if (hudProgressFill) hudProgressFill.style.width = `${job.progress}%`;
+    if (hudStageTitle) hudStageTitle.textContent = `${job.stage || 'Reconstructing'} (${job.progress}%)`;
+    if (hudStageDesc) hudStageDesc.textContent = job.message || '';
 
-    // Update steppers
-    if (job.progress < 25) {
-      setStepperActive(1);
-    } else if (job.progress < 60) {
-      setStepperActive(2);
-    } else if (job.progress < 90) {
-      setStepperActive(3);
-    } else {
-      setStepperActive(4);
+    // Update 3D holographic framing animation
+    if (state.viewer) {
+      state.viewer.updateLiveFramingStage(job.stage, job.progress);
     }
 
-    // Update terminal logs
-    if (job.logs && job.logs.length > 0) {
-      terminalLogs.innerHTML = '';
+    // Update terminal logs in HUD drawer
+    if (job.logs && job.logs.length > 0 && hudTerminalBody) {
+      hudTerminalBody.innerHTML = '';
       job.logs.forEach(line => {
         const div = document.createElement('div');
         div.className = 'log-line';
         div.textContent = line;
-        terminalLogs.appendChild(div);
+        hudTerminalBody.appendChild(div);
       });
-      terminalLogs.scrollTop = terminalLogs.scrollHeight;
+      hudTerminalBody.scrollTop = hudTerminalBody.scrollHeight;
     }
   }
 
   function appendTerminalLog(msg) {
-    const div = document.createElement('div');
-    div.className = 'log-line';
-    div.textContent = msg;
-    terminalLogs.appendChild(div);
-    terminalLogs.scrollTop = terminalLogs.scrollHeight;
-  }
-
-  function resetSteppers() {
-    for (let i = 1; i <= 4; i++) {
-      const step = document.getElementById(`step-${i}`);
-      if (step) step.className = 'step-item';
-    }
-  }
-
-  function setStepperActive(activeNum) {
-    for (let i = 1; i <= 4; i++) {
-      const step = document.getElementById(`step-${i}`);
-      if (!step) continue;
-      if (i < activeNum) {
-        step.className = 'step-item completed';
-      } else if (i === activeNum) {
-        step.className = 'step-item active';
-      } else {
-        step.className = 'step-item';
-      }
+    if (hudTerminalBody) {
+      const div = document.createElement('div');
+      div.className = 'log-line';
+      div.textContent = msg;
+      hudTerminalBody.appendChild(div);
+      hudTerminalBody.scrollTop = hudTerminalBody.scrollHeight;
     }
   }
 
   // --- Timer ---
   function startElapsedTimer() {
     state.startTime = Date.now();
-    processingTimer.textContent = 'Elapsed: 00:00';
+    if (hudTimer) hudTimer.textContent = '00:00';
     if (state.elapsedTimer) clearInterval(state.elapsedTimer);
     state.elapsedTimer = setInterval(() => {
       const diffSec = Math.floor((Date.now() - state.startTime) / 1000);
       const mins = String(Math.floor(diffSec / 60)).padStart(2, '0');
       const secs = String(diffSec % 60).padStart(2, '0');
-      processingTimer.textContent = `Elapsed: ${mins}:${secs}`;
+      if (hudTimer) hudTimer.textContent = `${mins}:${secs}`;
     }, 1000);
   }
 
@@ -375,19 +373,35 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // --- Cancel Job ---
-  cancelJobBtn.addEventListener('click', async () => {
+  async function handleCancelJob() {
     if (!state.currentJobId) return;
     if (confirm('Are you sure you want to cancel the reconstruction?')) {
       try {
         await API.cancelJob(state.currentJobId);
         clearInterval(state.pollTimer);
         stopElapsedTimer();
+        if (livePipelineHud) livePipelineHud.classList.add('hidden');
+        state.viewer.clearLiveFraming();
         showView('upload-section');
       } catch (err) {
         alert(`Error cancelling job: ${err.message}`);
       }
     }
-  });
+  }
+
+  if (hudCancelBtn) hudCancelBtn.addEventListener('click', handleCancelJob);
+  if (cancelJobBtn) cancelJobBtn.addEventListener('click', handleCancelJob);
+
+  if (hudToggleLogsBtn && hudLogsDrawer) {
+    hudToggleLogsBtn.addEventListener('click', () => {
+      hudLogsDrawer.classList.toggle('hidden');
+    });
+  }
+  if (hudCloseLogsBtn && hudLogsDrawer) {
+    hudCloseLogsBtn.addEventListener('click', () => {
+      hudLogsDrawer.classList.add('hidden');
+    });
+  }
 
   function showView(viewId) {
     [uploadSection, processingSection, viewerSection].forEach(section => {
@@ -428,6 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // --- On Job Completed ---
   async function onJobCompleted(job) {
+    if (livePipelineHud) livePipelineHud.classList.add('hidden');
+    if (viewerHeaderTitle) viewerHeaderTitle.textContent = '3D Scene Reconstructed';
+    
     showView('viewer-section');
     state.viewer.onResize();
 

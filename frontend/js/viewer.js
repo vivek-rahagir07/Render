@@ -1,9 +1,10 @@
 /**
- * Advanced Three.js 3D Viewer module for GLTF/GLB and PLY point clouds & meshes
+ * Advanced Three.js 3D Viewer module with Live Framing Pre-visualization
  * 
  * Features:
+ *   - Live Interactive Multi-View Image Framing during Neural Analysis
  *   - Soft Gaussian-style circular point splats (calibrated to bounding radius)
- *   - Both GLB and PLY direct rendering
+ *   - Dual GLB and PLY direct rendering
  *   - Turntable smooth auto-rotation
  *   - Studio environment & atmosphere modes
  *   - High-Res Snapshot Export
@@ -19,12 +20,14 @@ class ModelViewer {
     this.controls = null;
     this.gridHelper = null;
     this.currentModel = null;
+    this.liveFramingGroup = null;
+    this.hologramCore = null;
     this.initialCameraState = null;
     this.sceneBoundingRadius = 1.5;
     
     // Config states
-    this.pointSize = 1.0; // Scaled multiplier (0.2x to 3.0x)
-    this.pointStyle = 'smooth'; // 'smooth' (splats) or 'sharp' (raw points)
+    this.pointSize = 1.0;
+    this.pointStyle = 'smooth';
     this.showCameraFrustums = false;
     this.isAutoRotating = false;
     this.currentThemeIndex = 0;
@@ -40,6 +43,7 @@ class ModelViewer {
 
     // Track point cloud objects for real-time updates
     this._pointObjects = [];
+    this._objectUrlsToRevoke = [];
 
     this.init();
   }
@@ -78,7 +82,7 @@ class ModelViewer {
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(48, width / height, 0.01, 1000);
-    this.camera.position.set(0, 1.5, 3.5);
+    this.camera.position.set(0, 1.8, 4.0);
 
     // Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
@@ -97,7 +101,7 @@ class ModelViewer {
     this.controls.minDistance = 0.05;
     this.controls.maxDistance = 500;
     this.controls.autoRotate = false;
-    this.controls.autoRotateSpeed = 2.0;
+    this.controls.autoRotateSpeed = 1.8;
 
     // Studio Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
@@ -117,7 +121,7 @@ class ModelViewer {
 
     // Ground Grid
     this.gridHelper = new THREE.GridHelper(10, 24, this.themes[0].grid1, this.themes[0].grid2);
-    this.gridHelper.position.y = -0.5;
+    this.gridHelper.position.y = -0.6;
     this.scene.add(this.gridHelper);
 
     // Window resize handler
@@ -129,6 +133,13 @@ class ModelViewer {
 
   animate() {
     requestAnimationFrame(() => this.animate());
+    
+    // Animate holographic synthesis core if active
+    if (this.hologramCore) {
+      this.hologramCore.rotation.y += 0.015;
+      this.hologramCore.rotation.x += 0.008;
+    }
+
     if (this.controls) {
       this.controls.update();
     }
@@ -147,9 +158,174 @@ class ModelViewer {
   }
 
   /**
+   * Sets up real-time 3D Image Framing & Live Pipeline Visualizer
+   * Displays uploaded images orbiting in 3D space with frustums & laser rays
+   */
+  setupLiveFraming(files) {
+    this.clearLiveFraming();
+
+    if (this.currentModel) {
+      this.scene.remove(this.currentModel);
+      this.currentModel = null;
+    }
+    this._pointObjects = [];
+
+    this.liveFramingGroup = new THREE.Group();
+    const count = Math.min(files.length, 36);
+    const radius = 2.4;
+    const textureLoader = new THREE.TextureLoader();
+
+    // 1. Create central holographic neural synthesis core
+    const coreGroup = new THREE.Group();
+    const icoGeom = new THREE.IcosahedronGeometry(0.5, 1);
+    const icoMat = new THREE.MeshBasicMaterial({
+      color: 0x38bdf8,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.6
+    });
+    const icoMesh = new THREE.Mesh(icoGeom, icoMat);
+    coreGroup.add(icoMesh);
+
+    // Inner pulsing sphere
+    const sphereGeom = new THREE.SphereGeometry(0.25, 16, 16);
+    const sphereMat = new THREE.MeshBasicMaterial({
+      color: 0x6366f1,
+      transparent: true,
+      opacity: 0.8
+    });
+    const sphereMesh = new THREE.Mesh(sphereGeom, sphereMat);
+    coreGroup.add(sphereMesh);
+
+    coreGroup.position.set(0, 0, 0);
+    this.hologramCore = coreGroup;
+    this.liveFramingGroup.add(coreGroup);
+
+    // 2. Distribute photo cards around 3D orbit
+    for (let i = 0; i < count; i++) {
+      const file = files[i];
+      const angle = (i / count) * Math.PI * 2;
+      const x = Math.sin(angle) * radius;
+      const z = Math.cos(angle) * radius;
+      const y = Math.sin(i * 0.8) * 0.35 + 0.1; // Gentle elevation variation
+
+      const cardGroup = new THREE.Group();
+      cardGroup.position.set(x, y, z);
+      cardGroup.lookAt(0, 0, 0);
+
+      // Load thumbnail
+      const objUrl = URL.createObjectURL(file);
+      this._objectUrlsToRevoke.push(objUrl);
+
+      textureLoader.load(objUrl, (tex) => {
+        tex.generateMipmaps = true;
+        const aspect = tex.image.width / tex.image.height || 1.33;
+        const w = 0.55;
+        const h = w / aspect;
+
+        const planeGeom = new THREE.PlaneGeometry(w, h);
+        const planeMat = new THREE.MeshBasicMaterial({
+          map: tex,
+          side: THREE.DoubleSide
+        });
+        const planeMesh = new THREE.Mesh(planeGeom, planeMat);
+        cardGroup.add(planeMesh);
+
+        // Frame border
+        const frameGeom = new THREE.EdgesGeometry(planeGeom);
+        const frameMat = new THREE.LineBasicMaterial({ color: 0x38bdf8 });
+        const frameLine = new THREE.LineSegments(frameGeom, frameMat);
+        cardGroup.add(frameLine);
+
+        // Wireframe frustum pyramid behind photo
+        const frustumGeom = new THREE.ConeGeometry(w * 0.7, 0.4, 4);
+        const frustumMat = new THREE.MeshBasicMaterial({
+          color: 0x6366f1,
+          wireframe: true,
+          transparent: true,
+          opacity: 0.4
+        });
+        const frustumMesh = new THREE.Mesh(frustumGeom, frustumMat);
+        frustumMesh.rotation.x = Math.PI / 2;
+        frustumMesh.position.z = -0.2;
+        cardGroup.add(frustumMesh);
+      });
+
+      // Laser ray connecting camera frame to holographic center
+      const lineMat = new THREE.LineBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.35
+      });
+      const linePoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(0, 0, 0)];
+      const lineGeom = new THREE.BufferGeometry().setFromPoints(linePoints);
+      const laserLine = new THREE.Line(lineGeom, lineMat);
+      this.liveFramingGroup.add(laserLine);
+
+      this.liveFramingGroup.add(cardGroup);
+    }
+
+    this.scene.add(this.liveFramingGroup);
+
+    // Set camera view to encompass camera ring
+    this.camera.position.set(0, 2.5, 4.8);
+    this.camera.lookAt(0, 0, 0);
+    if (this.controls) {
+      this.controls.target.set(0, 0, 0);
+      this.controls.autoRotate = true;
+      this.controls.autoRotateSpeed = 1.5;
+    }
+
+    const statsBadge = document.getElementById('viewer-stats-badge');
+    if (statsBadge) {
+      statsBadge.textContent = `Live Analysis • ${count} Camera Frames Mapped`;
+    }
+  }
+
+  updateLiveFramingStage(stageName, progress) {
+    if (!this.hologramCore) return;
+    const stage = (stageName || '').toLowerCase();
+    
+    // Cycle colors based on pipeline stage
+    let color = 0x38bdf8;
+    if (stage.includes('match') || stage.includes('pair')) {
+      color = 0xa855f7; // Purple
+    } else if (stage.includes('refine') || stage.includes('optim') || stage.includes('pose')) {
+      color = 0xf59e0b; // Amber
+    } else if (stage.includes('export') || stage.includes('scene')) {
+      color = 0x10b981; // Emerald
+    }
+
+    if (this.hologramCore.children[0] && this.hologramCore.children[0].material) {
+      this.hologramCore.children[0].material.color.setHex(color);
+    }
+  }
+
+  clearLiveFraming() {
+    if (this.liveFramingGroup) {
+      this.scene.remove(this.liveFramingGroup);
+      this.liveFramingGroup.traverse((child) => {
+        if (child.geometry) child.geometry.dispose();
+        if (child.material) {
+          if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+          else child.material.dispose();
+        }
+      });
+      this.liveFramingGroup = null;
+      this.hologramCore = null;
+    }
+
+    // Revoke object URLs
+    this._objectUrlsToRevoke.forEach(url => URL.revokeObjectURL(url));
+    this._objectUrlsToRevoke = [];
+  }
+
+  /**
    * Load either a GLB scene or a PLY point cloud model
    */
   async loadModel(url, onProgress = null, format = 'glb') {
+    this.clearLiveFraming();
+
     const loadingOverlay = document.getElementById('viewer-loading-overlay');
     if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
