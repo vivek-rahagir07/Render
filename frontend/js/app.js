@@ -53,12 +53,18 @@ document.addEventListener('DOMContentLoaded', () => {
   // Viewer Elements
   const downloadGlbBtn = document.getElementById('download-glb-btn');
   const downloadPlyBtn = document.getElementById('download-ply-btn');
+  const viewGlbBtn = document.getElementById('view-glb-btn');
+  const viewPlyBtn = document.getElementById('view-ply-btn');
   const newReconBtn = document.getElementById('new-recon-btn');
   const btnResetCam = document.getElementById('btn-reset-cam');
+  const btnAutoRotate = document.getElementById('btn-auto-rotate');
   const btnToggleGrid = document.getElementById('btn-toggle-grid');
+  const btnPointStyle = document.getElementById('btn-point-style');
+  const pointStyleLabel = document.getElementById('point-style-label');
   const btnToggleBg = document.getElementById('btn-toggle-bg');
   const btnToggleCams = document.getElementById('btn-toggle-cams');
   const pointSizeSlider = document.getElementById('point-size-slider');
+  const pointSizeVal = document.getElementById('point-size-val');
 
   // Initialize Viewer
   state.viewer = new ModelViewer('three-canvas-container');
@@ -403,9 +409,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- 3D Viewer Toolbar Handlers ---
   btnResetCam.addEventListener('click', () => state.viewer.resetCamera());
 
+  btnAutoRotate.addEventListener('click', () => {
+    const isRotating = state.viewer.toggleAutoRotate();
+    btnAutoRotate.classList.toggle('active', isRotating);
+  });
+
   btnToggleGrid.addEventListener('click', () => {
     const isVisible = state.viewer.toggleGrid();
     btnToggleGrid.classList.toggle('active', isVisible);
+  });
+
+  btnPointStyle.addEventListener('click', () => {
+    const newStyle = state.viewer.togglePointStyle();
+    pointStyleLabel.textContent = newStyle === 'smooth' ? 'Splats' : 'Points';
+    btnPointStyle.classList.toggle('active', newStyle === 'smooth');
   });
 
   btnToggleBg.addEventListener('click', () => {
@@ -418,8 +435,36 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   pointSizeSlider.addEventListener('input', (e) => {
-    state.viewer.updatePointSize(e.target.value);
+    const val = parseFloat(e.target.value).toFixed(1);
+    if (pointSizeVal) pointSizeVal.textContent = val;
+    state.viewer.updatePointSize(val);
   });
+
+  if (viewGlbBtn && viewPlyBtn) {
+    viewGlbBtn.addEventListener('click', async () => {
+      if (!state.currentJobId) return;
+      viewGlbBtn.classList.add('active');
+      viewPlyBtn.classList.remove('active');
+      const glbUrl = API.getDownloadUrl(state.currentJobId, 'glb');
+      try {
+        await state.viewer.loadModel(glbUrl, null, 'glb');
+      } catch (err) {
+        console.error('Failed to load GLB:', err);
+      }
+    });
+
+    viewPlyBtn.addEventListener('click', async () => {
+      if (!state.currentJobId) return;
+      viewPlyBtn.classList.add('active');
+      viewGlbBtn.classList.remove('active');
+      const plyUrl = API.getDownloadUrl(state.currentJobId, 'ply');
+      try {
+        await state.viewer.loadModel(plyUrl, null, 'ply');
+      } catch (err) {
+        console.error('Failed to load PLY:', err);
+      }
+    });
+  }
 
   downloadGlbBtn.addEventListener('click', () => {
     if (state.currentJobId) {

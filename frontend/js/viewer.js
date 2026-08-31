@@ -1,12 +1,13 @@
 /**
- * Three.js 3D Viewer module for GLTF / GLB pointclouds and meshes
+ * Advanced Three.js 3D Viewer module for GLTF/GLB and PLY point clouds & meshes
  * 
- * MUSt3R outputs GLB files containing:
- *   - A point cloud (GLTF primitive mode=0) with POSITION + COLOR_0 attributes
- *   - Camera frustum wireframes as small triangle meshes
- * 
- * This viewer correctly renders point clouds with vertex colors and
- * hides the camera frustum geometry that would otherwise appear as "boxes".
+ * Features:
+ *   - Soft Gaussian-style circular point splats (eliminating harsh square pixels)
+ *   - Both GLB and PLY direct rendering
+ *   - Turntable smooth auto-rotation
+ *   - Studio environment & lighting modes
+ *   - Camera frustum toggle (hidden by default)
+ *   - Real-time point size and splat style tuning
  */
 class ModelViewer {
   constructor(containerId) {
@@ -16,16 +17,53 @@ class ModelViewer {
     this.renderer = null;
     this.controls = null;
     this.gridHelper = null;
+    this.groundDisc = null;
     this.currentModel = null;
     this.initialCameraState = null;
-    this.isDarkTheme = true;
+    
+    // Config states
     this.pointSize = 3.0;
+    this.pointStyle = 'smooth'; // 'smooth' (splats) or 'sharp' (raw points)
     this.showCameraFrustums = false;
+    this.isAutoRotating = false;
+    this.currentThemeIndex = 0;
+    this.themes = [
+      { name: 'Deep Space', bg: 0x050811, grid1: 0x6366f1, grid2: 0x223049 },
+      { name: 'Dark Studio', bg: 0x0f172a, grid1: 0x38bdf8, grid2: 0x334155 },
+      { name: 'Deep Charcoal', bg: 0x000000, grid1: 0x475569, grid2: 0x1e293b },
+      { name: 'Clean Light', bg: 0xf1f5f9, grid1: 0x94a3b8, grid2: 0xcbd5e1 }
+    ];
 
-    // Track point cloud objects for size updates
+    // Texture cache for circular soft points
+    this.circleTexture = this._createCircleTexture();
+
+    // Track point cloud objects for real-time updates
     this._pointObjects = [];
 
     this.init();
+  }
+
+  /**
+   * Generates a high-quality radial gradient alpha texture for circular splat rendering
+   */
+  _createCircleTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+
+    const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
+    grad.addColorStop(0.6, 'rgba(255, 255, 255, 0.95)');
+    grad.addColorStop(0.9, 'rgba(255, 255, 255, 0.3)');
+    grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
+
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.generateMipmaps = true;
+    return texture;
   }
 
   init() {
@@ -33,21 +71,21 @@ class ModelViewer {
 
     // Scene
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x050811);
+    this.scene.background = new THREE.Color(this.themes[0].bg);
 
     // Camera
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
-    this.camera = new THREE.PerspectiveCamera(50, width / height, 0.01, 1000);
-    this.camera.position.set(0, 1.5, 3);
+    this.camera = new THREE.PerspectiveCamera(48, width / height, 0.01, 1000);
+    this.camera.position.set(0, 1.5, 3.5);
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: "high-performance" });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.toneMappingExposure = 1.15;
     this.container.appendChild(this.renderer.domElement);
 
     // Controls
@@ -55,27 +93,33 @@ class ModelViewer {
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.05;
     this.controls.screenSpacePanning = true;
-    this.controls.minDistance = 0.1;
+    this.controls.minDistance = 0.05;
     this.controls.maxDistance = 500;
+    this.controls.autoRotate = false;
+    this.controls.autoRotateSpeed = 2.0;
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    // Studio Lighting
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
     this.scene.add(ambientLight);
 
-    const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.0);
-    dirLight1.position.set(5, 10, 7);
-    this.scene.add(dirLight1);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    keyLight.position.set(5, 12, 7);
+    this.scene.add(keyLight);
 
-    const dirLight2 = new THREE.DirectionalLight(0x88bbff, 0.6);
-    dirLight2.position.set(-5, -5, -5);
-    this.scene.add(dirLight2);
+    const fillLight = new THREE.DirectionalLight(0x88bbff, 0.7);
+    fillLight.position.set(-6, -4, -5);
+    this.scene.add(fillLight);
 
-    // Reference Grid
-    this.gridHelper = new THREE.GridHelper(10, 20, 0x6366f1, 0x223049);
+    const rimLight = new THREE.DirectionalLight(0x6366f1, 0.5);
+    rimLight.position.set(0, -10, 0);
+    this.scene.add(rimLight);
+
+    // Ground Grid
+    this.gridHelper = new THREE.GridHelper(10, 24, this.themes[0].grid1, this.themes[0].grid2);
     this.gridHelper.position.y = -0.5;
     this.scene.add(this.gridHelper);
 
-    // Event listeners
+    // Window resize handler
     window.addEventListener('resize', () => this.onResize());
 
     // Start animation loop
@@ -102,111 +146,145 @@ class ModelViewer {
   }
 
   /**
-   * Load a GLB model from URL
+   * Load either a GLB scene or a PLY point cloud model
    * @param {string} url
    * @param {Function} onProgress
+   * @param {string} format 'glb' or 'ply'
    */
-  async loadModel(url, onProgress = null) {
+  async loadModel(url, onProgress = null, format = 'glb') {
     const loadingOverlay = document.getElementById('viewer-loading-overlay');
     if (loadingOverlay) loadingOverlay.classList.remove('hidden');
 
-    // Remove old model if present
+    // Remove previous model
     if (this.currentModel) {
       this.scene.remove(this.currentModel);
       this.currentModel = null;
     }
     this._pointObjects = [];
 
-    const loader = new THREE.GLTFLoader();
+    const isPly = format.toLowerCase() === 'ply' || url.toLowerCase().endsWith('.ply');
 
     return new Promise((resolve, reject) => {
-      loader.load(
-        url,
-        (gltf) => {
-          this.currentModel = gltf.scene;
+      if (isPly && typeof THREE.PLYLoader !== 'undefined') {
+        const plyLoader = new THREE.PLYLoader();
+        plyLoader.load(
+          url,
+          (geometry) => {
+            geometry.computeVertexNormals();
+            const hasColors = geometry.attributes.color != null;
 
-          // Post-process the loaded scene to fix point cloud rendering
-          this._postProcessScene(this.currentModel);
+            const material = this._createPointMaterial(hasColors);
+            const points = new THREE.Points(geometry, material);
+            points.userData.isPointCloud = true;
 
-          this.scene.add(this.currentModel);
+            this.currentModel = new THREE.Group();
+            this.currentModel.add(points);
+            this._pointObjects.push(points);
 
-          // Center model and fit camera
-          this.fitCameraToModel(this.currentModel);
+            this.scene.add(this.currentModel);
+            this.fitCameraToModel(this.currentModel);
 
-          if (loadingOverlay) loadingOverlay.classList.add('hidden');
-          resolve(gltf);
-        },
-        (xhr) => {
-          if (xhr.lengthComputable && onProgress) {
-            const percent = Math.round((xhr.loaded / xhr.total) * 100);
-            onProgress(percent);
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            resolve({ scene: this.currentModel, type: 'ply' });
+          },
+          (xhr) => {
+            if (xhr.lengthComputable && onProgress) {
+              onProgress(Math.round((xhr.loaded / xhr.total) * 100));
+            }
+          },
+          (err) => {
+            console.error('Error loading PLY:', err);
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            reject(err);
           }
-        },
-        (error) => {
-          console.error('Error loading 3D GLB model:', error);
-          if (loadingOverlay) loadingOverlay.classList.add('hidden');
-          reject(error);
-        }
-      );
+        );
+      } else {
+        const gltfLoader = new THREE.GLTFLoader();
+        gltfLoader.load(
+          url,
+          (gltf) => {
+            this.currentModel = gltf.scene;
+            this._postProcessScene(this.currentModel);
+            this.scene.add(this.currentModel);
+            this.fitCameraToModel(this.currentModel);
+
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            resolve(gltf);
+          },
+          (xhr) => {
+            if (xhr.lengthComputable && onProgress) {
+              onProgress(Math.round((xhr.loaded / xhr.total) * 100));
+            }
+          },
+          (err) => {
+            console.error('Error loading GLB:', err);
+            if (loadingOverlay) loadingOverlay.classList.add('hidden');
+            reject(err);
+          }
+        );
+      }
     });
   }
 
   /**
-   * Post-process loaded GLTF scene to handle MUSt3R's output format:
-   * - Point cloud primitives (mode=0): Apply proper PointsMaterial with vertex colors
-   * - Camera frustum meshes: Hide by default (they appear as "boxes")
-   * 
-   * MUSt3R's GLB contains:
-   *   geometry_0: PointCloud (POSITION + COLOR_0, mode=0) — the actual reconstruction
-   *   geometry_1..N: Small triangle meshes (4-14 verts) — camera frustum wireframes
+   * Builds custom PointsMaterial with either smooth circular splats or crisp points
+   */
+  _createPointMaterial(hasVertexColors = true) {
+    const isSmooth = this.pointStyle === 'smooth';
+
+    return new THREE.PointsMaterial({
+      size: this.pointSize,
+      sizeAttenuation: true,
+      vertexColors: hasVertexColors,
+      color: hasVertexColors ? 0xffffff : 0xdddddd,
+      map: isSmooth ? this.circleTexture : null,
+      transparent: isSmooth,
+      alphaTest: isSmooth ? 0.05 : 0.0,
+      opacity: 0.98,
+      depthWrite: true
+    });
+  }
+
+  /**
+   * Post-processes loaded GLTF scene from MUSt3R
    */
   _postProcessScene(model) {
-    const CAMERA_FRUSTUM_MAX_VERTICES = 50; // Camera frustums have very few vertices (4 or 14)
+    const CAMERA_FRUSTUM_MAX_VERTICES = 50;
 
     model.traverse((child) => {
-      // Handle Points objects (GLTF mode=0 primitives)
+      // Handle Points primitives
       if (child.isPoints) {
         this._fixPointCloud(child);
         this._pointObjects.push(child);
         return;
       }
 
-      // Handle Mesh objects — detect and hide camera frustums
+      // Handle camera frustum meshes (they appear as pyramids/boxes)
       if (child.isMesh && child.geometry) {
         const vertexCount = child.geometry.attributes.position
           ? child.geometry.attributes.position.count
           : 0;
 
-        // Camera frustums from MUSt3R are tiny meshes (4 or 14 vertices)
         if (vertexCount > 0 && vertexCount <= CAMERA_FRUSTUM_MAX_VERTICES) {
           child.visible = this.showCameraFrustums;
           child.userData.isCameraFrustum = true;
+          // Wireframe material for cleaner look when toggled on
+          if (child.material) {
+            child.material.wireframe = true;
+            child.material.color = new THREE.Color(0x38bdf8);
+          }
         }
       }
     });
   }
 
-  /**
-   * Fix a THREE.Points object to render properly with vertex colors
-   * and appropriate point size.
-   */
   _fixPointCloud(pointsObj) {
     const geometry = pointsObj.geometry;
     if (!geometry) return;
 
-    // Check if vertex colors exist (COLOR_0 attribute from GLTF)
     const hasVertexColors = geometry.attributes.color != null;
+    const newMaterial = this._createPointMaterial(hasVertexColors);
 
-    // Replace the material with a proper PointsMaterial
-    const newMaterial = new THREE.PointsMaterial({
-      size: this.pointSize,
-      sizeAttenuation: true,
-      vertexColors: hasVertexColors,
-      // If no vertex colors, use a neutral light gray
-      color: hasVertexColors ? 0xffffff : 0xcccccc,
-    });
-
-    // Dispose old material
     if (pointsObj.material) {
       if (Array.isArray(pointsObj.material)) {
         pointsObj.material.forEach(m => m.dispose());
@@ -216,11 +294,6 @@ class ModelViewer {
     }
 
     pointsObj.material = newMaterial;
-
-    console.log(
-      `[Viewer] Point cloud configured: ${geometry.attributes.position.count} points, ` +
-      `vertex colors: ${hasVertexColors}, size: ${this.pointSize}`
-    );
   }
 
   fitCameraToModel(model) {
@@ -231,17 +304,17 @@ class ModelViewer {
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
 
-    // Place grid below the model
+    // Place grid slightly beneath model base
     if (this.gridHelper) {
-      this.gridHelper.position.y = box.min.y;
-      this.gridHelper.scale.set(maxDim * 0.5, 1, maxDim * 0.5);
+      this.gridHelper.position.set(center.x, box.min.y - 0.02, center.z);
+      this.gridHelper.scale.set(maxDim * 0.4, 1, maxDim * 0.4);
     }
 
     const fov = this.camera.fov * (Math.PI / 180);
-    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.5;
-    cameraZ = Math.max(cameraZ, 1.0);
+    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.6;
+    cameraZ = Math.max(cameraZ, 0.5);
 
-    this.camera.position.set(center.x, center.y + maxDim * 0.3, center.z + cameraZ);
+    this.camera.position.set(center.x, center.y + maxDim * 0.35, center.z + cameraZ);
     this.camera.lookAt(center);
 
     if (this.controls) {
@@ -249,7 +322,6 @@ class ModelViewer {
       this.controls.update();
     }
 
-    // Save initial state for reset
     this.initialCameraState = {
       position: this.camera.position.clone(),
       target: center.clone()
@@ -263,6 +335,13 @@ class ModelViewer {
     this.controls.update();
   }
 
+  toggleAutoRotate() {
+    if (!this.controls) return false;
+    this.isAutoRotating = !this.isAutoRotating;
+    this.controls.autoRotate = this.isAutoRotating;
+    return this.isAutoRotating;
+  }
+
   toggleGrid() {
     if (!this.gridHelper) return false;
     this.gridHelper.visible = !this.gridHelper.visible;
@@ -270,16 +349,25 @@ class ModelViewer {
   }
 
   toggleBackground() {
-    this.isDarkTheme = !this.isDarkTheme;
+    this.currentThemeIndex = (this.currentThemeIndex + 1) % this.themes.length;
+    const theme = this.themes[this.currentThemeIndex];
     if (this.scene) {
-      this.scene.background = new THREE.Color(this.isDarkTheme ? 0x050811 : 0xe2e8f0);
+      this.scene.background = new THREE.Color(theme.bg);
     }
-    return this.isDarkTheme;
+    if (this.gridHelper) {
+      this.gridHelper.material.color = new THREE.Color(theme.grid1);
+    }
+    return theme.name;
   }
 
-  /**
-   * Toggle visibility of camera frustum wireframes from MUSt3R
-   */
+  togglePointStyle() {
+    this.pointStyle = this.pointStyle === 'smooth' ? 'sharp' : 'smooth';
+    this._pointObjects.forEach((pointsObj) => {
+      this._fixPointCloud(pointsObj);
+    });
+    return this.pointStyle;
+  }
+
   toggleCameraFrustums() {
     this.showCameraFrustums = !this.showCameraFrustums;
     if (this.currentModel) {
@@ -295,7 +383,6 @@ class ModelViewer {
   updatePointSize(size) {
     this.pointSize = parseFloat(size);
 
-    // Update all tracked point cloud objects
     this._pointObjects.forEach((pointsObj) => {
       if (pointsObj.material) {
         pointsObj.material.size = this.pointSize;
@@ -303,7 +390,6 @@ class ModelViewer {
       }
     });
 
-    // Also traverse as a fallback in case anything was missed
     if (this.currentModel) {
       this.currentModel.traverse((child) => {
         if (child.isPoints && child.material) {
