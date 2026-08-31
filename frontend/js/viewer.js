@@ -231,16 +231,18 @@ class ModelViewer {
    */
   _createPointMaterial(hasVertexColors = true) {
     const isSmooth = this.pointStyle === 'smooth';
+    const baseRadius = this.sceneBoundingRadius || 1.5;
+    const computedSize = Math.max(0.002, baseRadius * 0.007 * (this.pointSize / 3.0));
 
     return new THREE.PointsMaterial({
-      size: this.pointSize,
+      size: computedSize,
       sizeAttenuation: true,
       vertexColors: hasVertexColors,
       color: hasVertexColors ? 0xffffff : 0xdddddd,
       map: isSmooth ? this.circleTexture : null,
       transparent: isSmooth,
-      alphaTest: isSmooth ? 0.05 : 0.0,
-      opacity: 0.98,
+      alphaTest: isSmooth ? 0.02 : 0.0,
+      opacity: 0.95,
       depthWrite: true
     });
   }
@@ -303,6 +305,12 @@ class ModelViewer {
     const center = box.getCenter(new THREE.Vector3());
     const size = box.getSize(new THREE.Vector3());
     const maxDim = Math.max(size.x, size.y, size.z);
+    this.sceneBoundingRadius = maxDim || 1.5;
+
+    // Refresh point cloud material sizes with accurate scene bounding dimensions
+    this._pointObjects.forEach((pointsObj) => {
+      this._fixPointCloud(pointsObj);
+    });
 
     // Place grid slightly beneath model base
     if (this.gridHelper) {
@@ -382,10 +390,12 @@ class ModelViewer {
 
   updatePointSize(size) {
     this.pointSize = parseFloat(size);
+    const baseRadius = this.sceneBoundingRadius || 1.5;
+    const computedSize = Math.max(0.002, baseRadius * 0.007 * (this.pointSize / 3.0));
 
     this._pointObjects.forEach((pointsObj) => {
       if (pointsObj.material) {
-        pointsObj.material.size = this.pointSize;
+        pointsObj.material.size = computedSize;
         pointsObj.material.needsUpdate = true;
       }
     });
@@ -393,7 +403,7 @@ class ModelViewer {
     if (this.currentModel) {
       this.currentModel.traverse((child) => {
         if (child.isPoints && child.material) {
-          child.material.size = this.pointSize;
+          child.material.size = computedSize;
           child.material.sizeAttenuation = true;
           child.material.needsUpdate = true;
         }

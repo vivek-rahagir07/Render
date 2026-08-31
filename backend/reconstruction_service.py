@@ -450,22 +450,33 @@ class ReconstructionService:
 
     def _postprocess_models(self, job_id: str, out_dir: Path):
         """
-        Locates the best generated GLB and produces a standard scene.glb and scene.ply.
+        Locates the optimal generated GLB (clean confidence threshold) and produces a standard scene.glb and scene.ply.
         """
-        glb_files = sorted(list(out_dir.glob("scene_*.glb")), key=lambda p: p.stat().st_mtime, reverse=True)
         main_glb = out_dir / "scene.glb"
         main_ply = out_dir / "scene.ply"
 
-        if glb_files:
-            # Pick the lowest confidence threshold that succeeded or newest file
-            best_glb = glb_files[0]
-            shutil.copyfile(best_glb, main_glb)
-            self._append_log(job_id, f"Primary GLB selected from {best_glb.name}")
-        elif not main_glb.is_file():
-            # If no glb exists, check if any glb in output
-            any_glb = list(out_dir.glob("*.glb"))
-            if any_glb:
-                shutil.copyfile(any_glb[0], main_glb)
+        # Check for clean confidence models in preferred order: 1.5 -> 2.0 -> 1.05
+        preferred_candidates = [
+            out_dir / "scene_1.5.glb",
+            out_dir / "scene_2.0.glb",
+            out_dir / "scene_1.05.glb",
+            out_dir / "scene_2.5.glb"
+        ]
+
+        selected_glb = None
+        for candidate in preferred_candidates:
+            if candidate.is_file() and candidate.stat().st_size > 50000:
+                selected_glb = candidate
+                break
+
+        if not selected_glb:
+            glb_files = sorted(list(out_dir.glob("*.glb")), key=lambda p: p.stat().st_size, reverse=True)
+            if glb_files:
+                selected_glb = glb_files[0]
+
+        if selected_glb:
+            shutil.copyfile(selected_glb, main_glb)
+            self._append_log(job_id, f"Primary GLB selected from {selected_glb.name} (filtered clean geometry)")
 
         # Generate PLY if missing using trimesh from scene.glb
         if not main_ply.is_file() and main_glb.is_file():
@@ -484,6 +495,14 @@ class ReconstructionService:
             output_files["glb"] = f"/storage/jobs/{job_id}/outputs/scene.glb"
         if main_ply.is_file():
             output_files["ply"] = f"/storage/jobs/{job_id}/outputs/scene.ply"
+
+        # Also add all available confidence levels
+        confidence_map = {}
+        for c_file in sorted(out_dir.glob("scene_*.glb")):
+            name = c_file.stem.replace("scene_", "")
+            confidence_map[name] = f"/storage/jobs/{job_id}/outputs/{c_file.name}"
+        if confidence_map:
+            output_files["confidence_levels"] = confidence_map
 
         with self._lock:
             job = self.jobs.get(job_id)
