@@ -6,18 +6,25 @@ from pathlib import Path
 from typing import List, Optional
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+BACKEND_DIR = Path(__file__).resolve().parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+STORAGE_DIR = BASE_DIR / "storage"
+
+# Add directories to sys.path for direct script execution
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
+if str(BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(BACKEND_DIR))
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from reconstruction_service import ReconstructionService, JobConfig, JobStatus
-
-BASE_DIR = Path(__file__).resolve().parent.parent
-FRONTEND_DIR = BASE_DIR / "frontend"
-STORAGE_DIR = BASE_DIR / "storage"
+try:
+    from backend.reconstruction_service import ReconstructionService, JobConfig, JobStatus
+except ImportError:
+    from reconstruction_service import ReconstructionService, JobConfig, JobStatus
 
 # Instantiate service
 service = ReconstructionService(base_storage_dir=str(STORAGE_DIR / "jobs"))

@@ -1,0 +1,15 @@
+{
+  "python.defaultInterpreterPath": "${userHome}/must3r/.venv/bin/python",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/backend",
+    "${userHome}/must3r",
+    "${userHome}/must3r/dust3r"
+  ],
+  "python.autoComplete.extraPaths": [
+    "${workspaceFolder}",
+    "${workspaceFolder}/backend",
+    "${userHome}/must3r",
+    "${userHome}/must3r/dust3r"
+  ]
+}
