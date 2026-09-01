@@ -89,6 +89,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initialize Viewer
   state.viewer = new ModelViewer('three-canvas-container');
 
+  // --- Theme Switcher (Noir Gold / Ivory Gold) ---
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const themeToggleLabel = document.getElementById('theme-toggle-label');
+
+  function applyTheme(theme) {
+    document.body.setAttribute('data-theme', theme);
+    localStorage.setItem('render3d_theme', theme);
+    if (themeToggleLabel) {
+      themeToggleLabel.textContent = theme === 'dark' ? 'Noir Gold' : 'Ivory Gold';
+    }
+  }
+
+  const savedTheme = localStorage.getItem('render3d_theme') || 'dark';
+  applyTheme(savedTheme);
+
+  if (themeToggleBtn) {
+    themeToggleBtn.addEventListener('click', () => {
+      const current = document.body.getAttribute('data-theme') || 'dark';
+      const nextTheme = current === 'dark' ? 'light' : 'dark';
+      applyTheme(nextTheme);
+    });
+  }
+
   // --- Initial System Health Check ---
   async function checkSystemHealth() {
     try {

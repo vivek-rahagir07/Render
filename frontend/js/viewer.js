@@ -32,10 +32,10 @@ class ModelViewer {
     this.isAutoRotating = false;
     this.currentThemeIndex = 0;
     this.themes = [
-      { name: 'Deep Space', bg: 0x050811, grid1: 0x6366f1, grid2: 0x223049 },
-      { name: 'Dark Studio', bg: 0x0f172a, grid1: 0x38bdf8, grid2: 0x334155 },
-      { name: 'Deep Charcoal', bg: 0x000000, grid1: 0x475569, grid2: 0x1e293b },
-      { name: 'Clean Light', bg: 0xf1f5f9, grid1: 0x94a3b8, grid2: 0xcbd5e1 }
+      { name: 'Noir & Gold', bg: 0x07080c, grid1: 0xd4af37, grid2: 0x212534 },
+      { name: 'Ivory & Gold', bg: 0xf6f6f9, grid1: 0xd4af37, grid2: 0xd6d6e0 },
+      { name: 'Obsidian Velvet', bg: 0x020305, grid1: 0xb89128, grid2: 0x141824 },
+      { name: 'Studio Slate', bg: 0x11131c, grid1: 0xfcedc5, grid2: 0x272c3d }
     ];
 
     // Texture cache for circular soft points
