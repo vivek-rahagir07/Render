@@ -1,73 +1,21 @@
-# Render 3D — Local MUSt3R 3D Reconstruction Web App
+# 🛰️ Render 3D — Single-Pass Drone & Aerial 3D Reconstruction Studio
 
-A modern, local-first web application for neural 3D scene reconstruction powered by [MUSt3R](https://github.com/naver/must3r) and Apple Silicon (MPS GPU).
-
----
-
-## Architecture Overview
-
-```
-HTML5 / Vanilla CSS / Vanilla JS
-             │
-             ▼
-      FastAPI API Server
-             │
-             ▼
-    ReconstructionService
-    (Modular Pipeline + Preprocessing Hooks)
-             │
-             ▼
-   MUSt3R 512 / PyTorch MPS
-   (get_reconstruction.py)
-             │
-             ▼
-        GLB + PLY
-             │
-             ▼
-  Three.js 3D Interactive Viewer
-```
-
-## Features
-
-- **Local-First & Private:** Runs entirely on your local machine using your existing MUSt3R installation.
-- **Apple Silicon (MPS) Acceleration:** Fast neural inference on M-series MacBooks using unified memory.
-- **Drag-and-Drop Uploader:** Multi-file drag & drop supporting `JPG`, `PNG`, and `WEBP` with real-time thumbnail previews and count badges (recommends 20–40 images).
-- **Asynchronous Execution:** Background job queue prevents UI freezes and handles long-running multi-view reconstructions smoothly.
-- **Live Terminal & Progress Tracking:** Real-time log streaming and multi-stage status indicators (Ingest → Matching → Refinement → Export).
-- **Interactive Three.js 3D Viewer:** Built with OrbitControls, GLTFLoader, customizable point size, grid toggle, dark/light theme toggle, and camera reset.
-- **Direct GLB & PLY Downloads:** One-click download buttons for standard 3D formats.
-- **Modular Pipeline:** Ready for future YOLO / SAM 2 dynamic object segmentation and removal integration.
+An AI-enabled system capable of generating georeferenced, metrically accurate 3D scene models from **single-pass drone video streams** or **multi-angle aerial photographs**. Powered by **MUSt3R** neural regressors and accelerated with **Apple Silicon (MPS)** and **CUDA**.
 
 ---
 
-## Directory Structure
+## ⚡ Quick Start (Run on Any Laptop)
 
-```
-Render/
-├── frontend/
-│   ├── index.html            # Semantic UI & viewer markup
-│   ├── css/
-│   │   └── style.css         # Glassmorphic dark design system
-│   └── js/
-│       ├── api.js            # FastAPI client & polling
-│       ├── viewer.js         # Three.js 3D viewport manager
-│       └── app.js            # App state & event orchestration
-├── backend/
-│   ├── main.py               # FastAPI server & endpoints
-│   ├── reconstruction_service.py # Subprocess runner & pipeline
-│   └── requirements.txt      # Python dependencies
-├── storage/
-│   └── jobs/                 # Per-job images, outputs, and logs
-├── .env.example              # Configuration template
-├── .gitignore
-└── README.md
-```
+### 📋 Prerequisites
+- **Python 3.10 or 3.11** installed
+- **Git** installed
+- Hardware:
+  - **Mac**: Apple Silicon (M1/M2/M3/M4) recommended (MPS accelerated)
+  - **Linux / Windows WSL2**: NVIDIA GPU with CUDA or modern CPU
 
 ---
 
-## Quick Start
-
-### 1. Prerequisites & Environment Setup
+### 🚀 1-Click Launch (macOS & Linux)
 
 1. **Clone the repository:**
    ```bash
@@ -75,53 +23,98 @@ Render/
    cd Render
    ```
 
-2. **Configure Environment:**
-   Copy the example environment file and customize paths if your MUSt3R installation is in a custom directory:
+2. **Run the startup script:**
    ```bash
-   cp .env.example .env
+   ./run.sh
+   ```
+   *The script automatically sets up `.env`, installs dependencies, launches the FastAPI server, and opens [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.*
+
+---
+
+### 🛠️ Manual Step-by-Step Installation
+
+If you prefer setting up manually:
+
+1. **Clone the Repository:**
+   ```bash
+   git clone https://github.com/vivek-rahagir07/Render.git
+   cd Render
+   ```
+
+2. **Create and Activate a Virtual Environment:**
+   ```bash
+   # macOS / Linux
+   python3 -m venv .venv
+   source .venv/bin/activate
+
+   # Windows (PowerShell)
+   python -m venv .venv
+   .venv\Scripts\Activate.ps1
    ```
 
 3. **Install Dependencies:**
-   Install backend requirements using your Python / MUSt3R virtual environment:
    ```bash
    pip install -r backend/requirements.txt
    ```
 
-### 2. Launch the Backend Server
+4. **Configure Environment Variables:**
+   ```bash
+   cp .env.example .env
+   ```
+   *(Ensure `MUST3R_ROOT_DIR` in `.env` points to your MUSt3R directory or leave default if already present)*
 
-Run the server with Uvicorn:
-```bash
-uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+5. **Start the Web Server:**
+   ```bash
+   uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload
+   ```
+
+6. **Open in Browser:**
+   Navigate to **`http://127.0.0.1:8000`**
+
+---
+
+## 🌟 Core Features
+
+- **🛸 Single-Pass Drone Video Ingestion:** Drop any `.mp4`/`.mov` drone video; client-side AI extracts sharp parallax keyframes while filtering motion blur.
+- **🪄 Automated AI Background & Clutter Isolation:** Powered by deep learning matting (`rembg`/ONNX) to remove background noise, focusing 100% of neural point density on the target subject.
+- **📏 3D Metric Measurement Ruler:** Interactive in-viewport ruler to measure real-world distances ($D$) and elevation height ($\Delta H$) in meters.
+- **🛰️ Live 3D Trajectory & Framing:** Holographic real-time visualization showing camera stations and the drone's flight path spline during analysis.
+- **👑 Haute Couture Noir & Ivory Gold Interface:** Dual-theme luxury design system with zero chunky UI elements.
+- **💾 Export Formats:** Instant one-click download for `.glb` (3D scene mesh) and `.ply` (metric point cloud).
+
+---
+
+## 📁 Project Structure
+
 ```
-*(Or specify your virtualenv directly, e.g. `~/must3r/.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload`)*
-
-### 3. Open the Web Application
-
-Open your browser and navigate to:
-```
-http://127.0.0.1:8000
+Render/
+├── run.sh                    # 1-Click Launch Script
+├── frontend/
+│   ├── index.html            # Cockpit UI & 3D Viewport Markup
+│   ├── css/
+│   │   └── style.css         # Noir Gold & Ivory Gold Design System
+│   └── js/
+│       ├── api.js            # API polling & job management
+│       ├── viewer.js         # Three.js 3D Viewer & Metric Ruler
+│       └── app.js            # Keyframe extraction & event bindings
+├── backend/
+│   ├── main.py               # FastAPI Endpoints & Static Server
+│   ├── reconstruction_service.py # Subprocess pipeline & AI Matting
+│   └── requirements.txt      # Python Dependencies
+├── storage/
+│   └── jobs/                 # Local job runs, frames, and 3D outputs
+├── .env.example              # Environment variables template
+└── README.md                 # Documentation & Guides
 ```
 
 ---
 
-## API Endpoints
+## 📡 API Reference
 
-| Method | Endpoint | Description |
+| Endpoint | Method | Description |
 |---|---|---|
-| `GET` | `/api/health` | Health check & hardware/weights diagnostics |
-| `POST` | `/api/reconstruction/jobs` | Upload images and queue a new reconstruction |
-| `GET` | `/api/reconstruction/jobs/{job_id}` | Poll progress, stage, logs, and output models |
-| `POST` | `/api/reconstruction/jobs/{job_id}/cancel` | Cancel an active reconstruction job |
-| `GET` | `/api/reconstruction/jobs/{job_id}/download/{format}` | Download generated `.glb` or `.ply` |
-
----
-
-## Configuration Options
-
-Default parameters can be configured via environment variables or the UI's Advanced Settings:
-
-- `image_size`: `512` (default, high quality) or `224` (fast)
-- `device`: `mps` (Apple Silicon GPU) or `cpu`
-- `max_bs`: `1` (optimal for 16GB RAM)
-- `num_refinements_iterations`: `5`
-- `execution_mode`: `retrieval` (for unordered photos) or `linseq` (for video sequences)
+| `/api/health` | `GET` | System health, GPU diagnostics, and model status |
+| `/api/reconstruction/jobs` | `POST` | Upload frames and start 3D reconstruction |
+| `/api/reconstruction/jobs/{job_id}` | `GET` | Real-time progress, stage, logs & model URIs |
+| `/api/reconstruction/jobs/{job_id}/cancel` | `POST` | Abort an active reconstruction job |
+| `/api/reconstruction/jobs/{job_id}/download/{format}` | `GET` | Download `.glb` or `.ply` |
