@@ -2,6 +2,7 @@ import asyncio
 import glob
 import logging
 import os
+import sys
 import re
 import shutil
 import subprocess
@@ -79,16 +80,52 @@ class ReconstructionService:
         self.storage_dir = Path(base_storage_dir or os.getenv("STORAGE_DIR", self.base_dir / "storage" / "jobs"))
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-        # MUSt3R environment paths
-        self.must3r_root = Path(os.path.expanduser(os.getenv("MUST3R_ROOT", "~/must3r"))).resolve()
-        self.python_bin = Path(os.path.expanduser(os.getenv("MUST3R_PYTHON", str(self.must3r_root / ".venv" / "bin" / "python"))))
+        # Dynamic MUSt3R auto-discovery across candidate paths
+        candidate_roots = []
+        if os.getenv("MUST3R_ROOT"):
+            candidate_roots.append(Path(os.path.expanduser(os.getenv("MUST3R_ROOT"))))
+        candidate_roots.extend([
+            Path.home() / "must3r",
+            self.base_dir / "must3r",
+            Path.home() / "Documents" / "must3r",
+            Path.home() / "Downloads" / "must3r",
+            Path("/opt/must3r")
+        ])
+
+        # Pick first existing must3r root or fallback to ~/must3r
+        self.must3r_root = candidate_roots[0]
+        for candidate in candidate_roots:
+            if (candidate / "get_reconstruction.py").is_file():
+                self.must3r_root = candidate.resolve()
+                break
+            elif candidate.is_dir():
+                self.must3r_root = candidate.resolve()
+
+        # Dynamic Python binary discovery
+        candidate_pythons = []
+        if os.getenv("MUST3R_PYTHON"):
+            candidate_pythons.append(Path(os.path.expanduser(os.getenv("MUST3R_PYTHON"))))
+        candidate_pythons.extend([
+            self.must3r_root / ".venv" / "bin" / "python",
+            self.must3r_root / "venv" / "bin" / "python",
+            self.base_dir / ".venv" / "bin" / "python",
+            Path(sys.executable)
+        ])
+
+        self.python_bin = candidate_pythons[0]
+        for py in candidate_pythons:
+            if py.is_file() and os.access(py, os.X_OK):
+                self.python_bin = py.resolve()
+                break
+
         self.script_path = self.must3r_root / "get_reconstruction.py"
         
-        # Model weights
-        self.weights_512 = Path(os.path.expanduser(os.getenv("MUST3R_WEIGHTS", str(self.must3r_root / "models" / "MUSt3R_512.pth")))).resolve()
-        self.retrieval_512 = Path(os.path.expanduser(os.getenv("MUST3R_RETRIEVAL", str(self.must3r_root / "models" / "MUSt3R_512_retrieval_trainingfree.pth")))).resolve()
-        self.weights_224 = self.must3r_root / "models" / "MUSt3R_224_cvpr.pth"
-        self.retrieval_224 = self.must3r_root / "models" / "MUSt3R_224_retrieval_trainingfree.pth"
+        # Model weights discovery
+        models_dir = self.must3r_root / "models"
+        self.weights_512 = Path(os.path.expanduser(os.getenv("MUST3R_WEIGHTS", str(models_dir / "MUSt3R_512.pth")))).resolve()
+        self.retrieval_512 = Path(os.path.expanduser(os.getenv("MUST3R_RETRIEVAL", str(models_dir / "MUSt3R_512_retrieval_trainingfree.pth")))).resolve()
+        self.weights_224 = models_dir / "MUSt3R_224_cvpr.pth"
+        self.retrieval_224 = models_dir / "MUSt3R_224_retrieval_trainingfree.pth"
 
         # Jobs state management
         self.jobs: Dict[str, JobInfo] = {}
@@ -392,6 +429,21 @@ class ReconstructionService:
         # Optimized memory image window for fast cross-attention without losing geometric constraint
         num_mem_imgs = min(int(cfg.get("num_mem_imgs", 24)), len(images))
 
+        # Pre-flight check for MUSt3R repository and script
+        if not self.must3r_root.is_dir() or not self.script_path.is_file():
+            err_msg = (
+                f"MUSt3R engine not found at: {self.must3r_root}\n"
+                f"To setup on this laptop, run: ./run.sh\n"
+                f"Or clone manually: git clone --recursive https://github.com/naver/must3r.git ~/must3r"
+            )
+            with self._lock:
+                job.status = JobStatus.FAILED
+                job.stage = "Failed"
+                job.error = f"MUSt3R directory not found at {self.must3r_root}. Please run ./run.sh to auto-configure."
+                job.completed_at = datetime.utcnow().isoformat()
+            self._append_log(job_id, f"[ERROR] {err_msg}")
+            return
+
         # Select weights
         if img_size == 224 and self.weights_224.is_file():
             weights_path = str(self.weights_224)
@@ -399,6 +451,9 @@ class ReconstructionService:
         else:
             weights_path = str(self.weights_512)
             retrieval_path = str(self.retrieval_512)
+
+        if not Path(weights_path).is_file():
+            self._append_log(job_id, f"[Notice] Model weights {weights_path} not found. Attempting reconstruction...")
 
         # Check retrieval codebook if retrieval mode is requested
         if exec_mode == "retrieval":
