@@ -1,15 +1,18 @@
 /**
- * Main Frontend Application Orchestrator
+ * Render 3D — Aerial Reconnaissance & Single-Pass Drone 3D Studio
+ * Client Application Logic
  */
+
 document.addEventListener('DOMContentLoaded', () => {
-  // State
+  // Global State
   const state = {
-    files: [], // Array of File objects
+    files: [],
     currentJobId: null,
     pollTimer: null,
     elapsedTimer: null,
     startTime: null,
-    viewer: null
+    viewer: null,
+    activeMode: 'video' // 'video' or 'photos'
   };
 
   // DOM Elements
@@ -18,17 +21,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Views
   const uploadSection = document.getElementById('upload-section');
-  const processingSection = document.getElementById('processing-section');
   const viewerSection = document.getElementById('viewer-section');
+
+  // Nav & Header Elements
+  const navBtnCreate = document.getElementById('nav-btn-create');
+  const navBtnViewer = document.getElementById('nav-btn-viewer');
+  const brandHomeLink = document.getElementById('brand-home-link');
+
+  // Theme Switcher
+  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const themeToggleLabel = document.getElementById('theme-toggle-label');
+
+  // Mode Tabs
+  const tabDroneVideo = document.getElementById('tab-drone-video');
+  const tabPhotos = document.getElementById('tab-photos');
+  const dropzoneTitle = document.getElementById('dropzone-title');
+  const dropzoneSubtitle = document.getElementById('dropzone-subtitle');
 
   // Upload Elements
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('file-input');
   const browseBtn = document.getElementById('browse-btn');
+  const videoExtractBar = document.getElementById('video-extract-bar');
+  const extractStatusText = document.getElementById('extract-status-text');
+  const extractPercentText = document.getElementById('extract-percent-text');
+  const extractProgressFill = document.getElementById('extract-progress-fill');
   const galleryContainer = document.getElementById('gallery-container');
   const imageGrid = document.getElementById('image-grid');
   const imageCountNum = document.getElementById('image-count-num');
-  const imageCountAdvice = document.getElementById('image-count-advice');
   const clearAllBtn = document.getElementById('clear-all-btn');
   const generateBtn = document.getElementById('generate-btn');
 
@@ -40,20 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const iterVal = document.getElementById('iter-val');
   const cfgMode = document.getElementById('cfg-mode');
   const cfgDevice = document.getElementById('cfg-device');
-
-  // Processing Elements
-  const processingStageText = document.getElementById('processing-stage-text');
-  const processingMsgText = document.getElementById('processing-msg-text');
-  const progressBarFill = document.getElementById('progress-bar-fill');
-  const progressPercent = document.getElementById('progress-percent');
-  const processingTimer = document.getElementById('processing-timer');
-  const terminalLogs = document.getElementById('terminal-logs');
-  const cancelJobBtn = document.getElementById('cancel-job-btn');
-
-  // Nav & Header Elements
-  const navBtnCreate = document.getElementById('nav-btn-create');
-  const navBtnViewer = document.getElementById('nav-btn-viewer');
-  const brandHomeLink = document.getElementById('brand-home-link');
 
   // Live HUD Elements (In 3D Viewport)
   const livePipelineHud = document.getElementById('live-pipeline-hud');
@@ -68,11 +74,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const hudCancelBtn = document.getElementById('hud-cancel-btn');
   const viewerHeaderTitle = document.getElementById('viewer-header-title');
 
-  // Viewer Elements
+  // Viewer Action Elements
   const downloadGlbBtn = document.getElementById('download-glb-btn');
   const downloadPlyBtn = document.getElementById('download-ply-btn');
   const viewGlbBtn = document.getElementById('view-glb-btn');
   const viewPlyBtn = document.getElementById('view-ply-btn');
+  const measureToolBtn = document.getElementById('measure-tool-btn');
   const snapshotBtn = document.getElementById('snapshot-btn');
   const newReconBtn = document.getElementById('new-recon-btn');
   const btnResetCam = document.getElementById('btn-reset-cam');
@@ -90,9 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
   state.viewer = new ModelViewer('three-canvas-container');
 
   // --- Theme Switcher (Noir Gold / Ivory Gold) ---
-  const themeToggleBtn = document.getElementById('theme-toggle-btn');
-  const themeToggleLabel = document.getElementById('theme-toggle-label');
-
   function applyTheme(theme) {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('render3d_theme', theme);
@@ -119,18 +123,39 @@ document.addEventListener('DOMContentLoaded', () => {
       const env = data.environment;
       if (env.is_ready) {
         statusPill.className = 'status-pill status-ready';
-        statusPillText.textContent = `${env.device} • MUSt3R 512`;
+        statusPillText.textContent = `${env.device.toUpperCase()} • Engine Ready`;
       } else {
         statusPill.className = 'status-pill status-error';
-        statusPillText.textContent = 'MUSt3R Warning (Check Logs)';
+        statusPillText.textContent = 'MUSt3R Initializing';
       }
     } catch (err) {
       statusPill.className = 'status-pill status-error';
-      statusPillText.textContent = 'Backend Offline';
+      statusPillText.textContent = 'Engine Offline';
       console.error('System health check error:', err);
     }
   }
   checkSystemHealth();
+
+  // --- Mission Mode Switcher ---
+  if (tabDroneVideo && tabPhotos) {
+    tabDroneVideo.addEventListener('click', () => {
+      tabDroneVideo.classList.add('active');
+      tabPhotos.classList.remove('active');
+      state.activeMode = 'video';
+      fileInput.accept = '.mp4,.mov,.m4v,.ts,video/*';
+      if (dropzoneTitle) dropzoneTitle.innerHTML = 'Drop Drone Flight Video here, or <button type="button" id="browse-btn" class="text-link">browse video</button>';
+      if (dropzoneSubtitle) dropzoneSubtitle.textContent = 'AI automatically filters motion blur and extracts sharp parallax keyframes for single-pass 3D reconstruction.';
+    });
+
+    tabPhotos.addEventListener('click', () => {
+      tabPhotos.classList.add('active');
+      tabDroneVideo.classList.remove('active');
+      state.activeMode = 'photos';
+      fileInput.accept = '.jpg,.jpeg,.png,.webp,image/*';
+      if (dropzoneTitle) dropzoneTitle.innerHTML = 'Drop Multi-Angle Aerial Photos here, or <button type="button" id="browse-btn" class="text-link">browse images</button>';
+      if (dropzoneSubtitle) dropzoneSubtitle.textContent = 'Supports JPG, PNG, and WEBP formats • Recommended: 15–40 images per flight pass';
+    });
+  }
 
   // --- Event Listeners: Upload & Drag-Drop ---
   browseBtn.addEventListener('click', () => fileInput.click());
@@ -140,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   fileInput.addEventListener('change', (e) => {
     handleFilesAdded(Array.from(e.target.files));
-    fileInput.value = ''; // Reset input to allow selecting same files
+    fileInput.value = '';
   });
 
   ['dragenter', 'dragover'].forEach(eventName => {
@@ -160,92 +185,119 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   dropzone.addEventListener('drop', (e) => {
-    const dt = e.dataTransfer;
-    if (dt && dt.files) {
-      handleFilesAdded(Array.from(dt.files));
-    }
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    handleFilesAdded(droppedFiles);
   });
-
-  function handleFilesAdded(newFiles) {
-    const validExts = ['.jpg', '.jpeg', '.png', '.webp'];
-    const filtered = newFiles.filter(file => {
-      const ext = '.' + file.name.split('.').pop().toLowerCase();
-      const isImg = file.type.startsWith('image/') || validExts.includes(ext);
-      // Avoid duplicate file names with same size
-      const isDuplicate = state.files.some(f => f.name === file.name && f.size === file.size);
-      return isImg && !isDuplicate;
-    });
-
-    if (filtered.length === 0) return;
-
-    state.files.push(...filtered);
-    updateGalleryUI();
-  }
-
-  function removeFile(index) {
-    state.files.splice(index, 1);
-    updateGalleryUI();
-  }
 
   clearAllBtn.addEventListener('click', () => {
     state.files = [];
     updateGalleryUI();
   });
 
+  async function handleFilesAdded(newFiles) {
+    const videoFiles = newFiles.filter(f => f.type.startsWith('video/') || /\.(mp4|mov|m4v|ts)$/i.test(f.name));
+    const imageFiles = newFiles.filter(f => f.type.startsWith('image/') || /\.(jpg|jpeg|png|webp)$/i.test(f.name));
+
+    if (videoFiles.length > 0) {
+      await processDroneVideo(videoFiles[0]);
+    } else if (imageFiles.length > 0) {
+      const existingNames = new Set(state.files.map(f => f.name));
+      const filtered = imageFiles.filter(f => !existingNames.has(f.name));
+      state.files = [...state.files, ...filtered];
+      updateGalleryUI();
+    }
+  }
+
+  /**
+   * Client-Side Automated Drone Video Keyframe Extractor
+   */
+  async function processDroneVideo(videoFile) {
+    videoExtractBar.classList.remove('hidden');
+    extractStatusText.textContent = `Analyzing drone video: ${videoFile.name}...`;
+    extractProgressFill.style.width = '10%';
+    extractPercentText.textContent = '10%';
+
+    const videoUrl = URL.createObjectURL(videoFile);
+    const video = document.createElement('video');
+    video.src = videoUrl;
+    video.muted = true;
+    video.playsInline = true;
+
+    await new Promise((resolve) => {
+      video.onloadedmetadata = () => resolve();
+    });
+
+    const duration = video.duration || 10;
+    const targetKeyframeCount = Math.min(30, Math.max(16, Math.floor(duration * 1.5)));
+    const interval = duration / targetKeyframeCount;
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const extractedBlobs = [];
+
+    canvas.width = Math.min(video.videoWidth || 1920, 1600);
+    canvas.height = Math.round(canvas.width * (video.videoHeight / video.videoWidth || 0.5625));
+
+    for (let i = 0; i < targetKeyframeCount; i++) {
+      const targetTime = i * interval;
+      video.currentTime = targetTime;
+
+      await new Promise(resolve => {
+        video.onseeked = () => resolve();
+      });
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      const frameFile = new File([blob], `drone_frame_${String(i + 1).padStart(3, '0')}.jpg`, { type: 'image/jpeg' });
+      extractedBlobs.push(frameFile);
+
+      const pct = Math.round(((i + 1) / targetKeyframeCount) * 100);
+      extractProgressFill.style.width = `${pct}%`;
+      extractPercentText.textContent = `${pct}%`;
+      extractStatusText.textContent = `Extracting keyframe ${i + 1} of ${targetKeyframeCount} (Optimal Parallax)...`;
+    }
+
+    URL.revokeObjectURL(videoUrl);
+    videoExtractBar.classList.add('hidden');
+
+    state.files = extractedBlobs;
+    updateGalleryUI();
+  }
+
   function updateGalleryUI() {
-    const count = state.files.length;
-    imageCountNum.textContent = count;
-
-    if (count > 0) {
+    imageCountNum.textContent = state.files.length;
+    
+    if (state.files.length > 0) {
       galleryContainer.classList.remove('hidden');
-      generateBtn.disabled = count < 2;
+      generateBtn.disabled = state.files.length < 2;
 
-      // Update advice indicator
-      if (count < 10) {
-        imageCountAdvice.textContent = `(Recommend 20–40 for best 3D detail • Need at least 2)`;
-        imageCountAdvice.style.color = 'var(--accent-amber)';
-      } else if (count >= 20 && count <= 50) {
-        imageCountAdvice.textContent = `(Optimal photograph count)`;
-        imageCountAdvice.style.color = 'var(--accent-green)';
-      } else {
-        imageCountAdvice.textContent = `(Recommend 20–40)`;
-        imageCountAdvice.style.color = 'var(--text-muted)';
-      }
-
-      // Render thumbnails
       imageGrid.innerHTML = '';
       state.files.forEach((file, idx) => {
         const card = document.createElement('div');
-        card.className = 'thumbnail-card';
+        card.className = 'image-card';
 
         const img = document.createElement('img');
-        img.className = 'thumbnail-img';
-        img.src = URL.createObjectURL(file);
-        img.alt = file.name;
+        const url = URL.createObjectURL(file);
+        img.src = url;
+        img.onload = () => URL.revokeObjectURL(url);
 
         const overlay = document.createElement('div');
-        overlay.className = 'thumbnail-overlay';
-
-        const delBtn = document.createElement('button');
-        delBtn.type = 'button';
-        delBtn.className = 'thumb-delete-btn';
-        delBtn.title = 'Remove photo';
-        delBtn.innerHTML = '&times;';
-        delBtn.addEventListener('click', (e) => {
+        overlay.className = 'card-overlay';
+        
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-btn';
+        removeBtn.innerHTML = '✕';
+        removeBtn.title = 'Remove Frame';
+        removeBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          removeFile(idx);
+          state.files.splice(idx, 1);
+          updateGalleryUI();
         });
-
-        overlay.appendChild(delBtn);
-
-        const meta = document.createElement('div');
-        meta.className = 'thumb-meta';
-        const kbSize = Math.round(file.size / 1024);
-        meta.textContent = `${file.name} (${kbSize} KB)`;
+        overlay.appendChild(removeBtn);
 
         card.appendChild(img);
         card.appendChild(overlay);
-        card.appendChild(meta);
         imageGrid.appendChild(card);
       });
     } else {
@@ -266,8 +318,6 @@ document.addEventListener('DOMContentLoaded', () => {
   cfgIterations.addEventListener('input', (e) => {
     iterVal.textContent = e.target.value;
   });
-
-
 
   // --- Optimization Preset Buttons ---
   const presetButtons = document.querySelectorAll('.preset-btn');
@@ -316,15 +366,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (livePipelineHud) {
       livePipelineHud.classList.remove('hidden');
-      hudStageTitle.textContent = 'Uploading & Mapping 3D Cameras...';
-      hudStageDesc.textContent = `Analyzing ${state.files.length} multi-view camera angles in real time...`;
+      hudStageTitle.textContent = 'Mapping Flight Trajectory & Features...';
+      hudStageDesc.textContent = `Analyzing ${state.files.length} aerial viewpoints in real time...`;
       hudProgressFill.style.width = '8%';
       if (hudTerminalBody) {
-        hudTerminalBody.innerHTML = '<div class="log-line info">[System] Multi-view framing initialized. Starting upload...</div>';
+        hudTerminalBody.innerHTML = '<div class="log-line info">[System] Aerial flight stream initialized. Starting neural regressors...</div>';
       }
     }
     if (viewerHeaderTitle) {
-      viewerHeaderTitle.textContent = 'Live Neural Analysis & Framing';
+      viewerHeaderTitle.textContent = 'Live Aerial Analysis & Trajectory';
     }
 
     startElapsedTimer();
@@ -332,7 +382,7 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const res = await API.createJob(state.files, config);
       state.currentJobId = res.job_id;
-      appendTerminalLog(`[Job] Created job ID: ${res.job_id}`);
+      appendTerminalLog(`[Job] Created mission ID: ${res.job_id}`);
       startPolling(res.job_id);
     } catch (err) {
       stopElapsedTimer();
@@ -369,17 +419,14 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateJobProgressUI(job) {
-    // Update live HUD
     if (hudProgressFill) hudProgressFill.style.width = `${job.progress}%`;
     if (hudStageTitle) hudStageTitle.textContent = `${job.stage || 'Reconstructing'} (${job.progress}%)`;
     if (hudStageDesc) hudStageDesc.textContent = job.message || '';
 
-    // Update 3D holographic framing animation
     if (state.viewer) {
       state.viewer.updateLiveFramingStage(job.stage, job.progress);
     }
 
-    // Update terminal logs in HUD drawer
     if (job.logs && job.logs.length > 0 && hudTerminalBody) {
       hudTerminalBody.innerHTML = '';
       job.logs.forEach(line => {
@@ -402,7 +449,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Timer ---
   function startElapsedTimer() {
     state.startTime = Date.now();
     if (hudTimer) hudTimer.textContent = '00:00';
@@ -422,10 +468,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Cancel Job ---
+  // --- Cancel Mission ---
   async function handleCancelJob() {
     if (!state.currentJobId) return;
-    if (confirm('Are you sure you want to cancel the reconstruction?')) {
+    if (confirm('Cancel the active 3D reconstruction mission?')) {
       try {
         await API.cancelJob(state.currentJobId);
         clearInterval(state.pollTimer);
@@ -434,13 +480,12 @@ document.addEventListener('DOMContentLoaded', () => {
         state.viewer.clearLiveFraming();
         showView('upload-section');
       } catch (err) {
-        alert(`Error cancelling job: ${err.message}`);
+        alert(`Error cancelling mission: ${err.message}`);
       }
     }
   }
 
   if (hudCancelBtn) hudCancelBtn.addEventListener('click', handleCancelJob);
-  if (cancelJobBtn) cancelJobBtn.addEventListener('click', handleCancelJob);
 
   if (hudToggleLogsBtn && hudLogsDrawer) {
     hudToggleLogsBtn.addEventListener('click', () => {
@@ -454,7 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function showView(viewId) {
-    [uploadSection, processingSection, viewerSection].forEach(section => {
+    [uploadSection, viewerSection].forEach(section => {
       if (section) section.classList.remove('active');
     });
     const target = document.getElementById(viewId);
@@ -498,7 +543,6 @@ document.addEventListener('DOMContentLoaded', () => {
     showView('viewer-section');
     state.viewer.onResize();
 
-    // Load GLB model
     const glbUrl = job.output_files && job.output_files.glb 
       ? job.output_files.glb 
       : `/storage/jobs/${job.job_id}/outputs/scene.glb`;
@@ -537,6 +581,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const isVisible = state.viewer.toggleCameraFrustums();
     btnToggleCams.classList.toggle('active', isVisible);
   });
+
+  if (measureToolBtn) {
+    measureToolBtn.addEventListener('click', () => {
+      state.viewer.toggleMeasurementTool();
+    });
+  }
 
   if (btnFullscreen) {
     btnFullscreen.addEventListener('click', () => state.viewer.toggleFullscreen());

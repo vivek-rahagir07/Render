@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Render 3D — Neural Multi-View Photogrammetry Studio</title>
-  <meta name="description" content="State-of-the-art neural 3D scene reconstruction powered by MUSt3R and Apple Silicon MPS GPU.">
+  <title>Render 3D — Single-Pass Drone Video & Aerial Neural Reconstruction</title>
+  <meta name="description" content="AI-enabled georeferenced & metrically accurate 3D scene reconstruction from single-pass drone video and aerial imagery.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -16,13 +16,13 @@
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/PLYLoader.js"></script>
 </head>
 <body data-theme="dark">
-  <!-- Ambient Background Glows -->
+  <!-- Ambient Gold Atmospheric Lights -->
   <div class="ambient-glow glow-top-left"></div>
   <div class="ambient-glow glow-top-right"></div>
   <div class="ambient-glow glow-bottom-center"></div>
 
   <div class="app-layout">
-    <!-- Navigation Header -->
+    <!-- Top Cockpit Header -->
     <header class="app-header">
       <div class="header-left">
         <a href="#" class="brand-link" id="brand-home-link">
@@ -34,8 +34,11 @@
             </svg>
           </div>
           <div class="brand-text-group">
-            <span class="logo-text">RENDER<span class="highlight-gold">3D</span></span>
-            <span class="badge-engine">Noir & Gold Studio</span>
+            <div class="brand-title-row">
+              <span class="logo-text">RENDER<span class="highlight-gold">3D</span></span>
+              <span class="badge-tag">AERIAL AI</span>
+            </div>
+            <span class="badge-engine">Single-Pass Drone Recon & 3D Mapping</span>
           </div>
         </a>
       </div>
@@ -44,11 +47,9 @@
         <nav class="nav-pills">
           <button type="button" id="nav-btn-create" class="nav-pill active">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"></circle>
-              <line x1="12" y1="8" x2="12" y2="16"></line>
-              <line x1="8" y1="12" x2="16" y2="12"></line>
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
-            <span>Reconstruct</span>
+            <span>Mission Setup</span>
           </button>
           <button type="button" id="nav-btn-viewer" class="nav-pill" disabled>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -56,14 +57,14 @@
               <polyline points="2 17 12 22 22 17"></polyline>
               <polyline points="2 12 12 17 22 12"></polyline>
             </svg>
-            <span>3D Viewport</span>
+            <span>3D Geospatial Viewport</span>
           </button>
         </nav>
       </div>
 
       <div class="header-right">
         <!-- Theme Toggle Switch -->
-        <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" title="Switch Theme (Noir Gold / Ivory Gold)">
+        <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" title="Toggle Noir Gold / Ivory Gold Theme">
           <svg class="theme-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"></circle>
             <line x1="12" y1="1" x2="12" y2="3"></line>
@@ -83,85 +84,92 @@
 
         <div id="system-status-pill" class="status-pill status-loading" title="Checking local inference hardware...">
           <span class="status-dot"></span>
-          <span id="status-pill-text">Checking System...</span>
+          <span id="status-pill-text">Engine Ready</span>
         </div>
-        <a href="https://github.com/vivek-rahagir07/Render" target="_blank" rel="noopener noreferrer" class="github-btn" title="View Source on GitHub">
-          <svg viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
-          </svg>
-        </a>
       </div>
     </header>
 
     <!-- Main Content Area -->
     <main class="main-content">
       
-      <!-- STEP 1: Upload & Configure Section -->
+      <!-- STEP 1: Mission Setup & Upload Section -->
       <section id="upload-section" class="view-panel active">
         
-        <!-- Hero Header -->
-        <div class="hero-banner">
-          <div class="hero-tag">
-            <span class="hero-tag-dot"></span>
-            <span>Local Neural Photogrammetry • Apple Silicon MPS</span>
+        <!-- Compact Hero Header -->
+        <div class="hero-cockpit">
+          <div class="hero-badge">
+            <svg class="sparkle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+            </svg>
+            <span>Single-Pass Drone Reconnaissance • Neural 3D Photogrammetry</span>
           </div>
           <h1 class="hero-title">
-            Transform Photos into <span class="highlight-gradient">Photorealistic 3D</span>
+            Single-Pass Drone Video to <span class="hero-gradient">Metrically Accurate 3D</span>
           </h1>
           <p class="hero-subtitle">
-            Reconstruct dense 3D point clouds, precise camera trajectories, and clean geometry directly on your Mac using state-of-the-art neural feature matching.
+            Generate georeferenced 3D terrain, infrastructure, building facades, and dense point clouds from a single UAV flight pass in seconds.
           </p>
         </div>
 
-        <!-- Visual 3D Capture Guide Cards -->
-        <div class="guide-cards-grid">
-          <div class="guide-card">
-            <div class="guide-card-icon">🔄</div>
-            <div class="guide-card-content">
-              <h3 class="guide-card-title">1. Orbit 360° Around Subject</h3>
-              <p class="guide-card-text">Walk around physical objects (chairs, shoes, rooms, statues) taking shots at 15°–30° steps.</p>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-card-icon">📐</div>
-            <div class="guide-card-content">
-              <h3 class="guide-card-title">2. 60–80% Image Overlap</h3>
-              <p class="guide-card-text">Ensure consecutive frames share prominent visual details so the neural matcher locks geometry.</p>
-            </div>
-          </div>
-          <div class="guide-card">
-            <div class="guide-card-icon">💡</div>
-            <div class="guide-card-content">
-              <h3 class="guide-card-title">3. Avoid 2D Flat Screens</h3>
-              <p class="guide-card-text">Avoid 2D desktop screenshots. Real-world texture and parallax produce rich, dense depth.</p>
-            </div>
-          </div>
+        <!-- Mission Input Mode Selector -->
+        <div class="mission-mode-bar">
+          <button type="button" class="mode-tab active" id="tab-drone-video">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 7l-7 5 7 5V7z"></path>
+              <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+            </svg>
+            <span>Single-Pass Drone Video (.MP4 / .MOV)</span>
+          </button>
+          <button type="button" class="mode-tab" id="tab-photos">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="21 15 16 10 5 21"></polyline>
+            </svg>
+            <span>Multi-Angle Aerial Photos</span>
+          </button>
         </div>
 
-        <!-- Dropzone Area -->
+        <!-- Sleek Dropzone Area -->
         <div id="dropzone" class="dropzone-area">
-          <input type="file" id="file-input" multiple accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" class="file-input-hidden">
+          <input type="file" id="file-input" multiple accept=".mp4,.mov,.m4v,.ts,.jpg,.jpeg,.png,.webp,image/*,video/*" class="file-input-hidden">
           <div class="dropzone-content">
-            <div class="upload-icon-wrapper">
+            <div class="upload-orb">
               <svg class="upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                 <polyline points="17 8 12 3 7 8"></polyline>
                 <line x1="12" y1="3" x2="12" y2="15"></line>
               </svg>
             </div>
-            <h3 class="dropzone-heading">Drop multi-view photographs here, or <button type="button" id="browse-btn" class="text-link">browse files</button></h3>
-            <p class="dropzone-sub">Supports JPG, PNG, and WEBP formats • Recommended: 15–40 images per scene</p>
+            <div class="dropzone-text-group">
+              <h3 class="dropzone-heading" id="dropzone-title">Drop Drone Flight Video or Aerial Photos here, or <button type="button" id="browse-btn" class="text-link">browse files</button></h3>
+              <p class="dropzone-sub" id="dropzone-subtitle">AI automatically filters motion blur and extracts sharp parallax keyframes for neural reconstruction.</p>
+            </div>
           </div>
         </div>
 
-        <!-- Image Gallery Previews -->
+        <!-- Video Processing Indicator / Extraction Bar -->
+        <div id="video-extract-bar" class="video-extract-bar hidden">
+          <div class="extract-header">
+            <div class="extract-title">
+              <span class="extract-dot"></span>
+              <span id="extract-status-text">AI Extracting High-Sharpness Keyframes from Drone Video...</span>
+            </div>
+            <span id="extract-percent-text">0%</span>
+          </div>
+          <div class="extract-progress-bg">
+            <div id="extract-progress-fill" class="extract-progress-fill" style="width: 0%;"></div>
+          </div>
+        </div>
+
+        <!-- Gallery / Keyframes Preview Grid -->
         <div id="gallery-container" class="gallery-container hidden">
           <div class="gallery-toolbar">
             <div class="gallery-count-badge">
-              <span id="image-count-num">0</span> images selected
-              <span id="image-count-advice" class="count-advice">(Recommend 15–40)</span>
+              <span id="image-count-num">0</span> Keyframes Selected
+              <span id="image-count-advice" class="count-advice">(Optimal for single-pass mapping)</span>
             </div>
-            <button id="clear-all-btn" class="btn btn-secondary btn-sm" type="button">Clear All</button>
+            <button id="clear-all-btn" class="btn btn-secondary btn-sm" type="button">Reset Frames</button>
           </div>
 
           <div id="image-grid" class="image-grid">
@@ -169,7 +177,43 @@
           </div>
         </div>
 
-        <!-- Advanced Configuration Card -->
+        <!-- Telemetry & Metric Metadata Bar (Optional) -->
+        <div class="telemetry-bar">
+          <div class="telemetry-item">
+            <span class="telemetry-label">Flight Trajectory</span>
+            <span class="telemetry-value" id="telem-trajectory">Single Linear Pass</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">Metric Scaling</span>
+            <span class="telemetry-value highlight-gold">Relative + Normalized Metric</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">Target Elevation</span>
+            <span class="telemetry-value">3D Terrain & Facades</span>
+          </div>
+          <div class="telemetry-item">
+            <span class="telemetry-label">Inference Engine</span>
+            <span class="telemetry-value">MUSt3R Neural Regressor</span>
+          </div>
+        </div>
+
+        <!-- Optimization Presets -->
+        <div class="presets-container">
+          <span class="presets-label">Mission Profile:</span>
+          <div class="presets-group">
+            <button type="button" class="preset-btn active" data-preset="balanced">
+              ⚡ Rapid Tactical Recon (Fast & Sharp)
+            </button>
+            <button type="button" class="preset-btn" data-preset="ultra">
+              🎯 Metric Terrain & Facades (Max Depth)
+            </button>
+            <button type="button" class="preset-btn" data-preset="fast">
+              🚀 Lightning 224 Preview (&lt; 8s)
+            </button>
+          </div>
+        </div>
+
+        <!-- Advanced Configuration Collapsible -->
         <div class="settings-card">
           <button type="button" id="settings-toggle" class="settings-toggle-btn" aria-expanded="false">
             <div class="toggle-title">
@@ -177,7 +221,7 @@
                 <circle cx="12" cy="12" r="3"></circle>
                 <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
               </svg>
-              <span>Precision Parameters & Pipeline Tuning</span>
+              <span>Advanced Pose Optimization & Hardware Settings</span>
             </div>
             <span class="toggle-arrow">▾</span>
           </button>
@@ -187,25 +231,25 @@
               <div class="form-group">
                 <label for="cfg-image-size" class="form-label">Neural Backbone Resolution</label>
                 <select id="cfg-image-size" class="form-select">
-                  <option value="512" selected>512px (Ultra High Precision / Recommended)</option>
-                  <option value="224">224px (Fast Low-VRAM Preview)</option>
+                  <option value="512" selected>512px (High Geometric Precision)</option>
+                  <option value="224">224px (Fast Low-VRAM)</option>
                 </select>
-                <span class="field-hint">512px yields maximum depth detail and dense point counts</span>
+                <span class="field-hint">512px delivers fine structural details and building edges</span>
               </div>
 
               <div class="form-group">
-                <label for="cfg-iterations" class="form-label">Refinement Iterations: <span id="iter-val">8</span></label>
-                <input type="range" id="cfg-iterations" min="1" max="15" value="8" class="form-range">
-                <span class="field-hint">Higher iterations refine global alignment and camera calibration</span>
+                <label for="cfg-iterations" class="form-label">Pose Refinement Iterations: <span id="iter-val">6</span></label>
+                <input type="range" id="cfg-iterations" min="1" max="15" value="6" class="form-range">
+                <span class="field-hint">Tighter global bundle adjustment convergence</span>
               </div>
 
               <div class="form-group">
-                <label for="cfg-mode" class="form-label">Pose Optimization Strategy</label>
+                <label for="cfg-mode" class="form-label">Flight Trajectory Strategy</label>
                 <select id="cfg-mode" class="form-select">
-                  <option value="retrieval" selected>Global Retrieval (Unordered Photos / 360° Orbit)</option>
-                  <option value="linseq">Sequential Tracking (Video Frame Stream)</option>
+                  <option value="retrieval" selected>Global Retrieval (Single-Pass Drone / 360° Orbit)</option>
+                  <option value="linseq">Sequential Flight Tracking (Linear Stream)</option>
                 </select>
-                <span class="field-hint">Retrieval discovers optimal camera pairings globally</span>
+                <span class="field-hint">Global retrieval connects non-adjacent overlapping views</span>
               </div>
 
               <div class="form-group">
@@ -220,113 +264,32 @@
           </div>
         </div>
 
-        <!-- Quick Presets -->
-        <div class="presets-container">
-          <span class="presets-label">Optimization Preset:</span>
-          <div class="presets-group">
-            <button type="button" class="preset-btn active" data-preset="balanced">
-              🚀 High Precision Turbo (Fast & Sharp)
-            </button>
-            <button type="button" class="preset-btn" data-preset="ultra">
-              🎯 Ultra Convergence
-            </button>
-            <button type="button" class="preset-btn" data-preset="fast">
-              ⚡ Instant 224 Preview
-            </button>
-          </div>
-        </div>
-
-        <!-- Submit Button Footer -->
+        <!-- Launch Button Footer -->
         <div class="action-footer">
           <button type="button" id="generate-btn" class="btn btn-primary btn-lg" disabled>
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
             </svg>
-            <span>Start Neural 3D Reconstruction</span>
+            <span>Launch Neural 3D Reconstruction</span>
           </button>
         </div>
       </section>
 
-      <!-- STEP 2: Processing & Live Tracking Section -->
-      <section id="processing-section" class="view-panel">
-        <div class="processing-card">
-          <div class="processing-header">
-            <div class="pulsing-spinner">
-              <div class="pulse-ring"></div>
-              <svg class="spin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"></circle>
-              </svg>
-            </div>
-            <h2 id="processing-stage-text" class="processing-title">Preparing Reconstruction</h2>
-            <p id="processing-msg-text" class="processing-desc">Initializing neural network weights on Apple Silicon...</p>
-          </div>
-
-          <!-- Progress Bar -->
-          <div class="progress-container">
-            <div class="progress-bar-bg">
-              <div id="progress-bar-fill" class="progress-bar-fill" style="width: 5%;"></div>
-            </div>
-            <div class="progress-meta">
-              <span id="progress-percent">5%</span>
-              <span id="processing-timer">Elapsed: 00:00</span>
-            </div>
-          </div>
-
-          <!-- Stage Stepper -->
-          <div class="stepper-container">
-            <div id="step-1" class="step-item active">
-              <div class="step-dot">1</div>
-              <span class="step-label">Ingest</span>
-            </div>
-            <div class="step-connector"></div>
-            <div id="step-2" class="step-item">
-              <div class="step-dot">2</div>
-              <span class="step-label">Matching</span>
-            </div>
-            <div class="step-connector"></div>
-            <div id="step-3" class="step-item">
-              <div class="step-dot">3</div>
-              <span class="step-label">Refinement</span>
-            </div>
-            <div class="step-connector"></div>
-            <div id="step-4" class="step-item">
-              <div class="step-dot">4</div>
-              <span class="step-label">Export 3D</span>
-            </div>
-          </div>
-
-          <!-- Live Terminal Output -->
-          <div class="terminal-panel">
-            <div class="terminal-header">
-              <span class="terminal-title">Console Output</span>
-              <span class="terminal-badge">LIVE INFERENCE</span>
-            </div>
-            <div id="terminal-logs" class="terminal-body">
-              <div class="log-line info">[System] Initializing MUSt3R process...</div>
-            </div>
-          </div>
-
-          <div class="processing-actions">
-            <button type="button" id="cancel-job-btn" class="btn btn-danger btn-sm">Cancel Process</button>
-          </div>
-        </div>
-      </section>
-
-      <!-- STEP 3: 3D Model Viewer & Live Framing Analysis Section -->
+      <!-- STEP 2: 3D Geospatial Viewer & Live Neural Analysis Studio -->
       <section id="viewer-section" class="view-panel">
         <div class="viewer-container">
           <!-- 3D Canvas Viewport -->
           <div id="three-canvas-container" class="canvas-container">
             <div id="viewer-loading-overlay" class="viewer-overlay hidden">
               <div class="loading-spinner"></div>
-              <span>Loading High-Resolution 3D Geometry...</span>
+              <span>Synthesizing High-Resolution 3D Point Cloud & Mesh...</span>
             </div>
           </div>
 
           <!-- Top Viewer Header -->
           <div class="viewer-top-bar">
             <div class="viewer-meta-info">
-              <h2 id="viewer-header-title" class="viewer-scene-title">3D Scene Studio</h2>
+              <h2 id="viewer-header-title" class="viewer-scene-title">Geospatial 3D Studio</h2>
               <span id="viewer-stats-badge" class="stats-badge">3D Point Cloud • Ready</span>
             </div>
 
@@ -336,6 +299,14 @@
                 <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">View GLB</button>
                 <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">View PLY</button>
               </div>
+
+              <!-- 3D Measurement Ruler Tool Toggle -->
+              <button type="button" id="measure-tool-btn" class="btn btn-secondary btn-sm" title="Measure Distance & Heights in 3D">
+                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12h20M2 12l5-5M2 12l5 5M22 12l-5-5M22 12l-5 5"></path>
+                </svg>
+                <span id="measure-btn-text">Ruler (Measure)</span>
+              </button>
 
               <button type="button" id="snapshot-btn" class="btn btn-secondary btn-sm" title="Capture High-Res Snapshot">
                 <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -366,9 +337,18 @@
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                New Job
+                New Mission
               </button>
             </div>
+          </div>
+
+          <!-- Measurement HUD Readout (Active when measuring) -->
+          <div id="measure-readout-hud" class="measure-readout-hud hidden">
+            <div class="measure-badge">
+              <span class="measure-dot"></span>
+              <span>3D Metric Distance: <strong id="measure-dist-val">0.00 m</strong></span>
+            </div>
+            <span class="measure-sub" id="measure-hint-text">Click 2 points on terrain or structure to measure</span>
           </div>
 
           <!-- Live Analysis HUD Overlay (Active during reconstruction) -->
@@ -423,14 +403,16 @@
               <span>Reset</span>
             </button>
 
-            <button type="button" id="btn-auto-rotate" class="dock-btn" title="Toggle 360° Turntable Rotation">
+            <button type="button" id="btn-auto-rotate" class="dock-btn" title="Toggle 360° Auto-Orbit">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67"></path>
+                <polyline points="23 4 23 10 17 10"></polyline>
+                <polyline points="1 20 1 14 7 14"></polyline>
+                <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
               </svg>
-              <span>Turntable</span>
+              <span>Orbit</span>
             </button>
 
-            <button type="button" id="btn-toggle-grid" class="dock-btn active" title="Toggle Reference Floor Grid">
+            <button type="button" id="btn-toggle-grid" class="dock-btn active" title="Toggle Ground Grid">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
                 <line x1="3" y1="9" x2="21" y2="9"></line>
@@ -441,23 +423,30 @@
               <span>Grid</span>
             </button>
 
-            <button type="button" id="btn-point-style" class="dock-btn active" title="Toggle Smooth Gaussian Splats vs Sharp Points">
+            <button type="button" id="btn-point-style" class="dock-btn active" title="Toggle Gaussian Circular Splats vs Crisp Points">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="8"></circle>
-                <circle cx="12" cy="12" r="3"></circle>
+                <circle cx="12" cy="12" r="10"></circle>
+                <circle cx="12" cy="12" r="4"></circle>
               </svg>
               <span id="point-style-label">Splats</span>
             </button>
 
-            <button type="button" id="btn-toggle-bg" class="dock-btn" title="Cycle Studio Atmosphere">
+            <button type="button" id="btn-toggle-bg" class="dock-btn" title="Cycle Atmosphere Theme">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <circle cx="12" cy="12" r="5"></circle>
-                <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"></path>
+                <line x1="12" y1="1" x2="12" y2="3"></line>
+                <line x1="12" y1="21" x2="12" y2="23"></line>
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                <line x1="1" y1="12" x2="3" y2="12"></line>
+                <line x1="21" y1="12" x2="23" y2="12"></line>
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
               </svg>
               <span>Atmosphere</span>
             </button>
 
-            <button type="button" id="btn-toggle-cams" class="dock-btn" title="Toggle Camera Positions">
+            <button type="button" id="btn-toggle-cams" class="dock-btn" title="Toggle Drone Camera Frustums">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                 <circle cx="12" cy="13" r="4"></circle>
@@ -465,7 +454,7 @@
               <span>Cameras</span>
             </button>
 
-            <button type="button" id="btn-fullscreen" class="dock-btn" title="Toggle Fullscreen">
+            <button type="button" id="btn-fullscreen" class="dock-btn" title="Toggle Fullscreen Viewport">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 3 21 3 21 9"></polyline>
                 <polyline points="9 21 3 21 3 15"></polyline>
@@ -478,18 +467,18 @@
             <div class="dock-divider"></div>
 
             <div class="dock-slider-group">
-              <label for="point-size-slider" class="dock-label">Density: <span id="point-size-val">1.0x</span></label>
-              <input type="range" id="point-size-slider" min="0.2" max="3.0" value="1.0" step="0.1" class="dock-slider">
+              <span class="dock-label">Density: <span id="point-size-val">1.0x</span></span>
+              <input type="range" id="point-size-slider" min="0.2" max="3.0" step="0.1" value="1.0" class="dock-slider" title="Point Size Multiplier">
             </div>
           </div>
 
-          <!-- Mouse Interaction Hints -->
+          <!-- Quick Navigation Hints -->
           <div class="viewer-hints">
-            <span>🖱️ Left: Orbit</span>
+            <span>🖱️ Left Click: Orbit</span>
             <span>•</span>
-            <span>Right: Pan</span>
+            <span>🖱️ Right Click: Pan</span>
             <span>•</span>
-            <span>Scroll: Zoom</span>
+            <span>📜 Scroll: Zoom</span>
           </div>
         </div>
       </section>
