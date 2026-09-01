@@ -114,7 +114,8 @@ class ReconstructionService:
         self.python_bin = Path(sys.executable)
         for py in candidate_pythons:
             if py.is_file() and os.access(py, os.X_OK):
-                self.python_bin = py.resolve()
+                # Preserve virtualenv binary path without resolving symlink to base python
+                self.python_bin = py
                 break
 
         # Bundled engine script inside Render repository
