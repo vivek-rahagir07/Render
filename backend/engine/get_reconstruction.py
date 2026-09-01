@@ -11,8 +11,9 @@ import pickle
 import traceback
 
 import torch
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as pl
-pl.ion()
 
 torch.backends.cuda.matmul.allow_tf32 = True  # for gpu >= Ampere and pytorch >= 1.12
 

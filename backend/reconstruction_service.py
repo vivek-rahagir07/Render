@@ -101,18 +101,17 @@ class ReconstructionService:
             elif candidate.is_dir():
                 self.must3r_root = candidate.resolve()
 
-        # Dynamic Python binary discovery
-        candidate_pythons = []
-        if os.getenv("MUST3R_PYTHON"):
-            candidate_pythons.append(Path(os.path.expanduser(os.getenv("MUST3R_PYTHON"))))
-        candidate_pythons.extend([
+        # Dynamic Python binary discovery (prioritizes active virtualenv / sys.executable)
+        candidate_pythons = [
             self.must3r_root / ".venv" / "bin" / "python",
-            self.must3r_root / "venv" / "bin" / "python",
             self.base_dir / ".venv" / "bin" / "python",
-            Path(sys.executable)
-        ])
+            self.must3r_root / "venv" / "bin" / "python",
+            Path(sys.executable),
+        ]
+        if os.getenv("MUST3R_PYTHON") and Path(os.path.expanduser(os.getenv("MUST3R_PYTHON"))).is_file():
+            candidate_pythons.insert(0, Path(os.path.expanduser(os.getenv("MUST3R_PYTHON"))))
 
-        self.python_bin = candidate_pythons[0]
+        self.python_bin = Path(sys.executable)
         for py in candidate_pythons:
             if py.is_file() and os.access(py, os.X_OK):
                 self.python_bin = py.resolve()
