@@ -50,6 +50,24 @@ def main():
     parser = get_args_parser()
     args = parser.parse_args()
 
+    # Dynamic sys.path injection for must3r, dust3r, and croco
+    candidate_roots = [
+        os.environ.get("MUST3R_ROOT"),
+        os.path.expanduser("~/must3r"),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")),
+        os.path.abspath(os.path.join(os.path.dirname(__file__), "../../must3r")),
+    ]
+    for cp in candidate_roots:
+        if cp and os.path.isdir(cp):
+            if cp not in sys.path:
+                sys.path.insert(0, cp)
+            dust3r_path = os.path.join(cp, "dust3r")
+            if os.path.isdir(dust3r_path) and dust3r_path not in sys.path:
+                sys.path.insert(0, dust3r_path)
+            croco_path = os.path.join(dust3r_path, "croco")
+            if os.path.isdir(croco_path) and croco_path not in sys.path:
+                sys.path.insert(0, croco_path)
+
     # Import must3r modules dynamically
     try:
         from must3r.model import load_model

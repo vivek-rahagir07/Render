@@ -35,9 +35,11 @@ else
     echo "✅ MUSt3R cloned successfully."
 fi
 
-# Ensure submodules (dust3r / croco) are initialized
-if [ -d "$MUST3R_PATH/.git" ]; then
-    (cd "$MUST3R_PATH" && git submodule update --init --recursive -q 2>/dev/null || true)
+# Ensure DUSt3R and submodules (croco) exist inside must3r/dust3r
+if [ ! -d "$MUST3R_PATH/dust3r/dust3r" ]; then
+    echo "📥 Initializing and cloning DUSt3R submodules into $MUST3R_PATH/dust3r..."
+    rm -rf "$MUST3R_PATH/dust3r"
+    git clone --recursive https://github.com/naver/dust3r.git "$MUST3R_PATH/dust3r"
 fi
 
 # 3. Model Weights Check & Auto-Download
