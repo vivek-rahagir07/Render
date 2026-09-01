@@ -346,6 +346,8 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // --- Generation / Reconstruction Trigger with Live 3D Framing ---
+  const cfgRemoveBg = document.getElementById('cfg-remove-bg');
+
   generateBtn.addEventListener('click', async () => {
     if (state.files.length < 2) return;
 
@@ -356,7 +358,8 @@ document.addEventListener('DOMContentLoaded', () => {
       max_bs: bs,
       num_refinements_iterations: parseInt(cfgIterations.value, 10),
       execution_mode: cfgMode.value,
-      cam_size: 0.05
+      cam_size: 0.05,
+      remove_background: cfgRemoveBg ? cfgRemoveBg.checked : true
     };
 
     // Transition directly to 3D Viewport with Live Framing

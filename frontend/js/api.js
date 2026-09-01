@@ -35,6 +35,7 @@ const API = {
     }
     if (config.execution_mode) formData.append('execution_mode', config.execution_mode);
     if (config.cam_size) formData.append('cam_size', config.cam_size);
+    if (config.remove_background !== undefined) formData.append('remove_background', config.remove_background);
 
     const response = await fetch(`${this.baseUrl}/api/reconstruction/jobs`, {
       method: 'POST',

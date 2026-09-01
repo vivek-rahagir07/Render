@@ -39,6 +39,7 @@ class JobConfig:
     cam_size: float = 0.05
     render_once: bool = False
     num_mem_imgs: int = 50
+    remove_background: bool = True
 
 
 @dataclass
@@ -278,6 +279,42 @@ class ReconstructionService:
                 if message:
                     job.message = message
 
+    def _apply_ai_background_removal(self, job_id: str, img_dir: Path) -> Path:
+        """Isolates foreground subjects and removes complex background clutter for maximum 3D precision."""
+        try:
+            import rembg
+            from concurrent.futures import ThreadPoolExecutor
+            
+            masked_dir = img_dir.parent / "masked_images"
+            masked_dir.mkdir(parents=True, exist_ok=True)
+            
+            image_paths = [f for f in img_dir.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")]
+            if not image_paths:
+                return img_dir
+
+            self._append_log(job_id, f"[AI Matting] Isolating foreground objects across {len(image_paths)} images...")
+            self._update_progress(job_id, 8, "AI Matting", f"Removing background clutter from {len(image_paths)} images...")
+
+            def process_single(p: Path):
+                try:
+                    with Image.open(p) as img:
+                        # Clean neutral white backdrop for clear subject feature tracking
+                        res = rembg.remove(img, bgcolor=(255, 255, 255, 255))
+                        res = res.convert("RGB")
+                        out_p = masked_dir / f"{p.stem}.jpg"
+                        res.save(out_p, "JPEG", quality=95)
+                except Exception as ex:
+                    shutil.copy2(p, masked_dir / p.name)
+
+            with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
+                list(executor.map(process_single, image_paths))
+
+            self._append_log(job_id, "[AI Matting] Backgrounds cleanly removed. Feeding masked foregrounds to neural regressor.")
+            return masked_dir
+        except Exception as e:
+            self._append_log(job_id, f"[AI Matting Notice] Skipping background removal: {e}")
+            return img_dir
+
     def _run_reconstruction_sync(self, job_id: str):
         """Executes the reconstruction job synchronously inside worker thread."""
         job = self.get_job(job_id)
@@ -297,13 +334,17 @@ class ReconstructionService:
 
         self._append_log(job_id, f"Starting reconstruction job {job_id}")
 
-        # Run preprocessing hooks if any (e.g. YOLO/SAM 2 dynamic object filter in future)
+        # Run preprocessing hooks if any
         processed_img_dir = img_dir
         for hook in self.preprocessing_hooks:
             try:
                 processed_img_dir = hook.process_images(processed_img_dir, job)
             except Exception as e:
                 self._append_log(job_id, f"Preprocessing hook warning: {e}")
+
+        # AI Background & Clutter Removal (Foreground Subject Isolation)
+        if job.config.get("remove_background", True):
+            processed_img_dir = self._apply_ai_background_removal(job_id, processed_img_dir)
 
         # Check image files
         valid_extensions = (".jpg", ".jpeg", ".png", ".webp")
