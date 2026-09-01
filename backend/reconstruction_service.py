@@ -118,7 +118,12 @@ class ReconstructionService:
                 self.python_bin = py.resolve()
                 break
 
-        self.script_path = self.must3r_root / "get_reconstruction.py"
+        # Bundled engine script inside Render repository
+        bundled_script = self.base_dir / "backend" / "engine" / "get_reconstruction.py"
+        if bundled_script.is_file():
+            self.script_path = bundled_script.resolve()
+        else:
+            self.script_path = self.must3r_root / "get_reconstruction.py"
         
         # Model weights discovery
         models_dir = self.must3r_root / "models"

@@ -35,22 +35,31 @@ else
     echo "✅ MUSt3R cloned successfully."
 fi
 
+# Ensure submodules (dust3r / croco) are initialized
+if [ -d "$MUST3R_PATH/.git" ]; then
+    (cd "$MUST3R_PATH" && git submodule update --init --recursive -q 2>/dev/null || true)
+fi
+
 # 3. Model Weights Check & Auto-Download
 MODELS_DIR="$MUST3R_PATH/models"
 mkdir -p "$MODELS_DIR"
 
-if [ ! -f "$MODELS_DIR/MUSt3R_512.pth" ]; then
-    echo ""
-    echo "📥 Downloading MUSt3R 512 model weights (~1.2 GB)..."
-    if command -v curl >/dev/null 2>&1; then
-        curl -L -o "$MODELS_DIR/MUSt3R_512.pth" "https://download.europe.naverlabs.com/must3r/MUSt3R_512.pth"
-    elif command -v wget >/dev/null 2>&1; then
-        wget -O "$MODELS_DIR/MUSt3R_512.pth" "https://download.europe.naverlabs.com/must3r/MUSt3R_512.pth"
-    else
-        echo "⚠️ Please download MUSt3R_512.pth into $MODELS_DIR/MUSt3R_512.pth"
+download_file() {
+    local url="$1"
+    local dest="$2"
+    local name="$3"
+    if [ ! -f "$dest" ]; then
+        echo "📥 Downloading $name..."
+        if command -v curl >/dev/null 2>&1; then
+            curl -L -o "$dest" "$url"
+        elif command -v wget >/dev/null 2>&1; then
+            wget -O "$dest" "$url"
+        fi
     fi
-    echo "✅ Model weights ready."
-fi
+}
+
+download_file "https://download.europe.naverlabs.com/must3r/MUSt3R_512.pth" "$MODELS_DIR/MUSt3R_512.pth" "MUSt3R 512 Backbone (~1.6 GB)"
+download_file "https://download.europe.naverlabs.com/must3r/MUSt3R_512_retrieval_trainingfree.pth" "$MODELS_DIR/MUSt3R_512_retrieval_trainingfree.pth" "Retrieval Weights (8.4 MB)"
 
 # 4. Virtual Environment Detection & Setup
 VENV_DIR=""
