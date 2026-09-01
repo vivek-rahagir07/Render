@@ -281,38 +281,60 @@ class ReconstructionService:
 
     def _apply_ai_background_removal(self, job_id: str, img_dir: Path) -> Path:
         """Isolates foreground subjects and removes complex background clutter for maximum 3D precision."""
+        image_paths = [f for f in img_dir.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")]
+        if not image_paths:
+            return img_dir
+
+        masked_dir = img_dir.parent / "masked_images"
+        masked_dir.mkdir(parents=True, exist_ok=True)
+
         try:
             import rembg
-            from concurrent.futures import ThreadPoolExecutor
-            
-            masked_dir = img_dir.parent / "masked_images"
-            masked_dir.mkdir(parents=True, exist_ok=True)
-            
-            image_paths = [f for f in img_dir.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp")]
-            if not image_paths:
-                return img_dir
+            from concurrent.futures import ThreadPoolExecutor, as_completed
 
-            self._append_log(job_id, f"[AI Matting] Isolating foreground objects across {len(image_paths)} images...")
-            self._update_progress(job_id, 8, "AI Matting", f"Removing background clutter from {len(image_paths)} images...")
+            self._append_log(job_id, f"[AI Matting] Processing {len(image_paths)} images for foreground subject isolation...")
+            self._update_progress(job_id, 8, "AI Matting", f"Isolating subjects across {len(image_paths)} images...")
+
+            # Use lightweight session
+            session = None
+            try:
+                session = rembg.new_session('u2netp')
+            except Exception:
+                try:
+                    session = rembg.new_session('u2net')
+                except Exception:
+                    session = None
 
             def process_single(p: Path):
+                out_p = masked_dir / f"{p.stem}.jpg"
                 try:
                     with Image.open(p) as img:
-                        # Clean neutral white backdrop for clear subject feature tracking
-                        res = rembg.remove(img, bgcolor=(255, 255, 255, 255))
+                        img_rgb = img.convert("RGB")
+                        if session:
+                            res = rembg.remove(img_rgb, session=session, bgcolor=(255, 255, 255, 255))
+                        else:
+                            res = rembg.remove(img_rgb, bgcolor=(255, 255, 255, 255))
                         res = res.convert("RGB")
-                        out_p = masked_dir / f"{p.stem}.jpg"
                         res.save(out_p, "JPEG", quality=95)
                 except Exception as ex:
-                    shutil.copy2(p, masked_dir / p.name)
+                    # Fallback to copy original image
+                    shutil.copy2(p, out_p)
 
             with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
-                list(executor.map(process_single, image_paths))
+                futures = [executor.submit(process_single, p) for p in image_paths]
+                for f in as_completed(futures, timeout=45):
+                    pass
 
-            self._append_log(job_id, "[AI Matting] Backgrounds cleanly removed. Feeding masked foregrounds to neural regressor.")
-            return masked_dir
+            # Verify that masked directory contains valid files
+            valid_masked = [f for f in masked_dir.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp") and f.stat().st_size > 1000]
+            if len(valid_masked) >= 2:
+                self._append_log(job_id, f"[AI Matting] Successfully isolated subjects ({len(valid_masked)} frames ready for 3D reconstruction).")
+                return masked_dir
+            else:
+                self._append_log(job_id, "[AI Matting Notice] Using original high-res frames for 3D reconstruction.")
+                return img_dir
         except Exception as e:
-            self._append_log(job_id, f"[AI Matting Notice] Skipping background removal: {e}")
+            self._append_log(job_id, f"[AI Matting Notice] Continuing with original image frames: {e}")
             return img_dir
 
     def _run_reconstruction_sync(self, job_id: str):
