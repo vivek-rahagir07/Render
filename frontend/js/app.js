@@ -246,14 +246,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
 
+  // --- Optimization Preset Buttons ---
+  const presetButtons = document.querySelectorAll('.preset-btn');
+  let selectedPreset = 'balanced';
+
+  presetButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      presetButtons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      selectedPreset = btn.dataset.preset;
+
+      if (selectedPreset === 'balanced') {
+        cfgImageSize.value = '512';
+        cfgIterations.value = '6';
+        iterVal.textContent = '6';
+      } else if (selectedPreset === 'ultra') {
+        cfgImageSize.value = '512';
+        cfgIterations.value = '10';
+        iterVal.textContent = '10';
+      } else if (selectedPreset === 'fast') {
+        cfgImageSize.value = '224';
+        cfgIterations.value = '4';
+        iterVal.textContent = '4';
+      }
+    });
+  });
+
   // --- Generation / Reconstruction Trigger with Live 3D Framing ---
   generateBtn.addEventListener('click', async () => {
     if (state.files.length < 2) return;
 
+    const bs = selectedPreset === 'ultra' ? 1 : 2;
     const config = {
       image_size: parseInt(cfgImageSize.value, 10),
       device: cfgDevice.value,
-      max_bs: 1,
+      max_bs: bs,
       num_refinements_iterations: parseInt(cfgIterations.value, 10),
       execution_mode: cfgMode.value,
       cam_size: 0.05

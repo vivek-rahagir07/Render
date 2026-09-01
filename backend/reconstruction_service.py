@@ -201,16 +201,24 @@ class ReconstructionService:
 
         target_path = job_dir / clean_name
 
-        # Write and verify PIL image integrity
-        with open(target_path, "wb") as f:
-            f.write(content)
-
+        # Write, normalize EXIF orientation, and optimize size for fast neural processing
         try:
-            with Image.open(target_path) as img:
-                img.verify()
+            import io
+            from PIL import ImageOps
+            with Image.open(io.BytesIO(content)) as img:
+                # Correct EXIF rotation (crucial for iPhone / camera photos)
+                img = ImageOps.exif_transpose(img)
+                img = img.convert("RGB")
+                
+                # Rescale high-megapixel photos (e.g. 48MP) to optimal 1600px max edge
+                max_edge = 1600
+                if max(img.size) > max_edge:
+                    img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+                
+                img.save(target_path, "JPEG", quality=95, optimize=True)
         except Exception as e:
             target_path.unlink(missing_ok=True)
-            raise ValueError(f"Uploaded file {clean_name} is corrupted or not a valid image: {e}")
+            raise ValueError(f"Uploaded file {clean_name} is corrupted or invalid: {e}")
 
         # Update image count
         with self._lock:
@@ -312,11 +320,14 @@ class ReconstructionService:
         cfg = job.config
         img_size = int(cfg.get("image_size", 512))
         device = str(cfg.get("device", "mps"))
-        max_bs = int(cfg.get("max_bs", 1))
-        num_refinements = int(cfg.get("num_refinements_iterations", 5))
+        # Optimized batch size for Apple Silicon unified memory
+        default_bs = 2 if device in ["mps", "cuda"] and len(images) > 3 else 1
+        max_bs = int(cfg.get("max_bs", default_bs))
+        num_refinements = int(cfg.get("num_refinements_iterations", 6))
         exec_mode = str(cfg.get("execution_mode", "retrieval"))
         cam_size = float(cfg.get("cam_size", 0.05))
-        num_mem_imgs = min(int(cfg.get("num_mem_imgs", 50)), len(images))
+        # Optimized memory image window for fast cross-attention without losing geometric constraint
+        num_mem_imgs = min(int(cfg.get("num_mem_imgs", 24)), len(images))
 
         # Select weights
         if img_size == 224 and self.weights_224.is_file():
