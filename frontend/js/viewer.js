@@ -1,18 +1,19 @@
 /**
- * Advanced Three.js 3D Geospatial Viewer & Measurement Studio
+ * Advanced Three.js 3D Geospatial Viewer & Tactical Aerial Studio
  * 
  * Features:
- *   - 3D Metric Measurement Ruler Tool (Distance in meters & Elevation ΔH)
- *   - Drone Flight Path Trajectory Visualizer
- *   - Live Interactive Multi-View Image Framing during Neural Analysis
- *   - Soft Gaussian circular point splats (calibrated to bounding radius)
- *   - Dual GLB and PLY direct rendering
- *   - Turntable smooth auto-rotation
- *   - Studio environment & atmosphere modes
- *   - High-Res Snapshot Export
- *   - Fullscreen viewport
- *   - Real-time point density & splat style tuning
+ *   - Spatial Holographic Keyframe Viewers with Optical Ray Frustums & Ground Tethers
+ *   - Animated Drone Flight Path Spline with Real-Time Tracer Particle
+ *   - Futuristic Tri-Axis Gyroscopic Reconnaissance Core with Ground Radar Scan Rings
+ *   - Floating Ambient Geospatial Depth Particles
+ *   - High-Tech Circular Polar/Tactical Radar Ground Grid
+ *   - 3D Metric Measurement Ruler Tool with Dynamic Distance Labels
+ *   - Calibrated Gaussian Circular Splats for Ultra-Smooth Dense Point Clouds
+ *   - Dual GLB (PBR Mesh/Points) and PLY Direct Rendering
+ *   - High-Res Tactical Snapshot Capture
+ *   - Atmosphere & Environment Lighting Presets
  */
+
 class ModelViewer {
   constructor(containerId) {
     this.container = document.getElementById(containerId);
@@ -20,12 +21,17 @@ class ModelViewer {
     this.camera = null;
     this.renderer = null;
     this.controls = null;
-    this.gridHelper = null;
+    this.gridGroup = null;
     this.currentModel = null;
     this.liveFramingGroup = null;
     this.hologramCore = null;
+    this.ambientParticles = null;
+    this.flightSplineCurve = null;
+    this.flightTracerMesh = null;
+    this.groundRadarRing = null;
     this.initialCameraState = null;
     this.sceneBoundingRadius = 1.5;
+    this.clock = new THREE.Clock();
     
     // Measurement Tool states
     this.isMeasuring = false;
@@ -41,14 +47,15 @@ class ModelViewer {
     this.isAutoRotating = false;
     this.currentThemeIndex = 0;
     this.themes = [
-      { name: 'Noir & Gold', bg: 0x06070a, grid1: 0xd4af37, grid2: 0x212534 },
-      { name: 'Ivory & Gold', bg: 0xf8f8fb, grid1: 0xd4af37, grid2: 0xd6d6e0 },
-      { name: 'Obsidian Velvet', bg: 0x020305, grid1: 0xb89128, grid2: 0x141824 },
-      { name: 'Studio Slate', bg: 0x11131c, grid1: 0xfcedc5, grid2: 0x272c3d }
+      { name: 'Noir & Gold', bg: 0x050608, grid1: 0xd4af37, grid2: 0x161a24, ring: 0xd4af37 },
+      { name: 'Cyber Obsidian', bg: 0x020306, grid1: 0x38bdf8, grid2: 0x0e1726, ring: 0x38bdf8 },
+      { name: 'Studio Slate', bg: 0x0c0e14, grid1: 0xfacc15, grid2: 0x1e2433, ring: 0xfacc15 },
+      { name: 'Ivory Studio', bg: 0xf5f6fa, grid1: 0xd4af37, grid2: 0xd6d8e2, ring: 0xd4af37 }
     ];
 
-    // Texture cache for circular soft points
+    // Texture cache for circular soft splats
     this.circleTexture = this._createCircleTexture();
+    this.cardBorderTexture = this._createCardBorderTexture();
 
     // Track point cloud objects for real-time updates
     this._pointObjects = [];
@@ -68,8 +75,8 @@ class ModelViewer {
 
     const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
     grad.addColorStop(0.0, 'rgba(255, 255, 255, 1.0)');
-    grad.addColorStop(0.6, 'rgba(255, 255, 255, 0.95)');
-    grad.addColorStop(0.9, 'rgba(255, 255, 255, 0.3)');
+    grad.addColorStop(0.5, 'rgba(255, 255, 255, 0.95)');
+    grad.addColorStop(0.85, 'rgba(255, 255, 255, 0.35)');
     grad.addColorStop(1.0, 'rgba(255, 255, 255, 0.0)');
 
     ctx.fillStyle = grad;
@@ -80,59 +87,103 @@ class ModelViewer {
     return texture;
   }
 
+  /**
+   * Generates a rounded glowing border texture for spatial keyframe holographic cards
+   */
+  _createCardBorderTexture() {
+    const canvas = document.createElement('canvas');
+    canvas.width = 128;
+    canvas.height = 128;
+    const ctx = canvas.getContext('2d');
+
+    ctx.strokeStyle = 'rgba(212, 175, 55, 0.9)';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(4, 4, 120, 120);
+
+    // Subtle corner accents
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 6;
+    // Top-left
+    ctx.beginPath();
+    ctx.moveTo(4, 20); ctx.lineTo(4, 4); ctx.lineTo(20, 4);
+    ctx.stroke();
+    // Top-right
+    ctx.beginPath();
+    ctx.moveTo(108, 4); ctx.lineTo(124, 4); ctx.lineTo(124, 20);
+    ctx.stroke();
+    // Bottom-left
+    ctx.beginPath();
+    ctx.moveTo(4, 108); ctx.lineTo(4, 124); ctx.lineTo(20, 124);
+    ctx.stroke();
+    // Bottom-right
+    ctx.beginPath();
+    ctx.moveTo(108, 124); ctx.lineTo(124, 124); ctx.lineTo(124, 108);
+    ctx.stroke();
+
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+  }
+
   init() {
     if (!this.container) return;
 
     // Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.themes[0].bg);
+    this.scene.fog = new THREE.FogExp2(this.themes[0].bg, 0.025);
     this.scene.add(this.measureGroup);
 
     // Camera
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
-    this.camera = new THREE.PerspectiveCamera(48, width / height, 0.01, 1000);
-    this.camera.position.set(0, 1.8, 4.0);
+    this.camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
+    this.camera.position.set(0, 2.2, 4.6);
 
     // Renderer
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true, powerPreference: "high-performance" });
+    this.renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      preserveDrawingBuffer: true,
+      powerPreference: "high-performance"
+    });
     this.renderer.setSize(width, height);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.outputEncoding = THREE.sRGBEncoding;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.2;
     this.container.appendChild(this.renderer.domElement);
 
     // Controls
     this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
-    this.controls.dampingFactor = 0.05;
+    this.controls.dampingFactor = 0.06;
     this.controls.screenSpacePanning = true;
     this.controls.minDistance = 0.05;
     this.controls.maxDistance = 500;
     this.controls.autoRotate = false;
-    this.controls.autoRotateSpeed = 1.8;
+    this.controls.autoRotateSpeed = 1.4;
 
     // Studio Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.4);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
     this.scene.add(ambientLight);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    keyLight.position.set(5, 12, 7);
+    const keyLight = new THREE.DirectionalLight(0xfff3db, 1.4);
+    keyLight.position.set(6, 14, 8);
     this.scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0x88bbff, 0.7);
-    fillLight.position.set(-6, -4, -5);
+    const fillLight = new THREE.DirectionalLight(0x7dd3fc, 0.8);
+    fillLight.position.set(-8, 6, -6);
     this.scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xd4af37, 0.6);
-    rimLight.position.set(0, -10, 0);
+    const rimLight = new THREE.DirectionalLight(0xd4af37, 0.7);
+    rimLight.position.set(0, -10, 2);
     this.scene.add(rimLight);
 
-    // Ground Grid
-    this.gridHelper = new THREE.GridHelper(10, 24, this.themes[0].grid1, this.themes[0].grid2);
-    this.gridHelper.position.y = -0.6;
-    this.scene.add(this.gridHelper);
+    // Build High-Tech Geospatial Grid
+    this._buildGeospatialGrid();
+
+    // Build Ambient Floating Particles
+    this._buildAmbientParticles();
 
     // Setup Click listener for 3D Measurement Tool
     this.renderer.domElement.addEventListener('pointerdown', (e) => this._onPointerDown(e));
@@ -144,13 +195,117 @@ class ModelViewer {
     this.animate();
   }
 
+  /**
+   * Builds an ultra-clean tactical geospatial grid with primary/secondary rings
+   */
+  _buildGeospatialGrid() {
+    if (this.gridGroup) {
+      this.scene.remove(this.gridGroup);
+    }
+
+    this.gridGroup = new THREE.Group();
+    this.gridGroup.position.y = -0.65;
+
+    // 1. Orthogonal grid lines with soft opacity
+    const gridHelper = new THREE.GridHelper(12, 32, this.themes[0].grid1, this.themes[0].grid2);
+    gridHelper.material.transparent = true;
+    gridHelper.material.opacity = 0.55;
+    this.gridGroup.add(gridHelper);
+
+    // 2. Tactical Concentric Radar Rings
+    const ringRadii = [1.2, 2.4, 3.8, 5.2];
+    ringRadii.forEach((r, idx) => {
+      const ringGeom = new THREE.RingGeometry(r - 0.008, r + 0.008, 64);
+      const ringMat = new THREE.MeshBasicMaterial({
+        color: this.themes[0].grid1,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: idx === 1 ? 0.45 : 0.2
+      });
+      const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+      ringMesh.rotation.x = Math.PI / 2;
+      this.gridGroup.add(ringMesh);
+    });
+
+    // 3. Ground Radar Sweep Beam (interactive animated)
+    const sweepGeom = new THREE.CircleGeometry(4.0, 32, 0, Math.PI / 3);
+    const sweepMat = new THREE.MeshBasicMaterial({
+      color: this.themes[0].ring,
+      side: THREE.DoubleSide,
+      transparent: true,
+      opacity: 0.08
+    });
+    this.groundRadarRing = new THREE.Mesh(sweepGeom, sweepMat);
+    this.groundRadarRing.rotation.x = Math.PI / 2;
+    this.gridGroup.add(this.groundRadarRing);
+
+    this.scene.add(this.gridGroup);
+  }
+
+  /**
+   * Adds subtle floating ambient data dust particles to give profound geospatial 3D depth
+   */
+  _buildAmbientParticles() {
+    const particleCount = 140;
+    const geom = new THREE.BufferGeometry();
+    const positions = new Float32Array(particleCount * 3);
+
+    for (let i = 0; i < particleCount * 3; i += 3) {
+      positions[i] = (Math.random() - 0.5) * 12;
+      positions[i + 1] = Math.random() * 4 - 0.5;
+      positions[i + 2] = (Math.random() - 0.5) * 12;
+    }
+
+    geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+    const mat = new THREE.PointsMaterial({
+      size: 0.035,
+      map: this.circleTexture,
+      transparent: true,
+      opacity: 0.4,
+      color: 0xd4af37,
+      depthWrite: false
+    });
+
+    this.ambientParticles = new THREE.Points(geom, mat);
+    this.scene.add(this.ambientParticles);
+  }
+
   animate() {
     requestAnimationFrame(() => this.animate());
     
-    // Animate holographic synthesis core if active
+    const elapsedTime = this.clock.getElapsedTime();
+
+    // 1. Animate Gyroscopic Holographic Core
     if (this.hologramCore) {
-      this.hologramCore.rotation.y += 0.015;
-      this.hologramCore.rotation.x += 0.008;
+      if (this.hologramCore.ring1) this.hologramCore.ring1.rotation.y = elapsedTime * 0.8;
+      if (this.hologramCore.ring2) this.hologramCore.ring2.rotation.x = elapsedTime * 0.6;
+      if (this.hologramCore.ring3) this.hologramCore.ring3.rotation.z = elapsedTime * 0.5;
+      if (this.hologramCore.core) {
+        this.hologramCore.core.rotation.y = elapsedTime * 1.2;
+        this.hologramCore.core.rotation.x = elapsedTime * 0.7;
+        const scale = 1.0 + Math.sin(elapsedTime * 3.0) * 0.08;
+        this.hologramCore.core.scale.set(scale, scale, scale);
+      }
+    }
+
+    // 2. Animate Ground Radar Sweep Ring
+    if (this.groundRadarRing) {
+      this.groundRadarRing.rotation.z = elapsedTime * 0.6;
+    }
+
+    // 3. Animate Flight Path Tracer along drone trajectory spline
+    if (this.flightSplineCurve && this.flightTracerMesh) {
+      const t = (elapsedTime * 0.12) % 1.0;
+      const pt = this.flightSplineCurve.getPointAt(t);
+      if (pt) {
+        this.flightTracerMesh.position.copy(pt);
+      }
+    }
+
+    // 4. Slowly drift ambient geospatial particles
+    if (this.ambientParticles) {
+      this.ambientParticles.rotation.y = elapsedTime * 0.02;
     }
 
     if (this.controls) {
@@ -208,7 +363,7 @@ class ModelViewer {
     this.raycaster.setFromCamera(this.mouse, this.camera);
     const objectsToIntersect = [];
     if (this.currentModel) objectsToIntersect.push(this.currentModel);
-    if (this.gridHelper) objectsToIntersect.push(this.gridHelper);
+    if (this.gridGroup) objectsToIntersect.push(this.gridGroup);
 
     const intersects = this.raycaster.intersectObjects(objectsToIntersect, true);
 
@@ -226,37 +381,47 @@ class ModelViewer {
 
     this.measurePoints.push(point);
 
-    // Create marker dot
+    // Glowing target marker node
+    const markerGroup = new THREE.Group();
+    markerGroup.position.copy(point);
+
     const dotGeom = new THREE.SphereGeometry(0.04, 16, 16);
     const dotMat = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
     const dotMesh = new THREE.Mesh(dotGeom, dotMat);
-    dotMesh.position.copy(point);
-    this.measureGroup.add(dotMesh);
+    markerGroup.add(dotMesh);
+
+    // Outer target ring
+    const ringGeom = new THREE.RingGeometry(0.07, 0.085, 24);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
+    const ringMesh = new THREE.Mesh(ringGeom, ringMat);
+    markerGroup.add(ringMesh);
+
+    this.measureGroup.add(markerGroup);
 
     const distVal = document.getElementById('measure-dist-val');
     const hintText = document.getElementById('measure-hint-text');
 
     if (this.measurePoints.length === 1) {
-      if (hintText) hintText.textContent = 'Point 1 placed. Click second point to measure distance.';
+      if (hintText) hintText.textContent = 'Point 1 placed. Click target surface to measure 3D span.';
     } else if (this.measurePoints.length === 2) {
       const p1 = this.measurePoints[0];
       const p2 = this.measurePoints[1];
 
-      // Draw connecting laser line
+      // Laser Line
       const lineGeom = new THREE.BufferGeometry().setFromPoints([p1, p2]);
       const lineMat = new THREE.LineDashedMaterial({
-        color: 0xd4af37,
-        dashSize: 0.1,
-        gapSize: 0.05,
-        linewidth: 2
+        color: 0xfacc15,
+        dashSize: 0.08,
+        gapSize: 0.04,
+        linewidth: 3
       });
       const line = new THREE.Line(lineGeom, lineMat);
       line.computeLineDistances();
       this.measureGroup.add(line);
 
-      // Distance calculation (calibrated relative to scene bounding radius)
+      // Distance calculation
       const rawDistance = p1.distanceTo(p2);
-      const metricScaleFactor = 5.0; // Scaled to estimated real-world drone meters
+      const metricScaleFactor = 5.0; // Drone metric estimation factor
       const metricDistance = (rawDistance * metricScaleFactor).toFixed(2);
       const deltaHeight = (Math.abs(p2.y - p1.y) * metricScaleFactor).toFixed(2);
 
@@ -269,13 +434,18 @@ class ModelViewer {
     while (this.measureGroup.children.length > 0) {
       const obj = this.measureGroup.children[0];
       this.measureGroup.remove(obj);
-      if (obj.geometry) obj.geometry.dispose();
-      if (obj.material) obj.material.dispose();
+      if (obj.traverse) {
+        obj.traverse((child) => {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) child.material.dispose();
+        });
+      }
     }
   }
 
   /**
    * Sets up real-time 3D Image Framing & Live Pipeline Visualizer
+   * Creates sleek, refined spatial photo holographic cards with delicate optical frustums
    */
   setupLiveFraming(files) {
     this.clearLiveFraming();
@@ -288,31 +458,54 @@ class ModelViewer {
 
     this.liveFramingGroup = new THREE.Group();
     const count = Math.min(files.length, 36);
-    const radius = 2.4;
+    const radius = 2.5;
     const textureLoader = new THREE.TextureLoader();
 
-    // 1. Central holographic neural core
+    // 1. Futuristic Tri-Axis Gyroscopic Reconnaissance Core
     const coreGroup = new THREE.Group();
-    const icoGeom = new THREE.IcosahedronGeometry(0.5, 1);
-    const icoMat = new THREE.MeshBasicMaterial({
+    
+    // Outer Torus Ring 1
+    const tGeom1 = new THREE.TorusGeometry(0.55, 0.012, 16, 64);
+    const tMat1 = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.75 });
+    const ring1 = new THREE.Mesh(tGeom1, tMat1);
+    coreGroup.add(ring1);
+
+    // Inner Torus Ring 2
+    const tGeom2 = new THREE.TorusGeometry(0.42, 0.01, 16, 64);
+    const tMat2 = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65 });
+    const ring2 = new THREE.Mesh(tGeom2, tMat2);
+    ring2.rotation.x = Math.PI / 4;
+    coreGroup.add(ring2);
+
+    // Core Octahedron Crystal
+    const octGeom = new THREE.OctahedronGeometry(0.24, 0);
+    const octMat = new THREE.MeshStandardMaterial({
       color: 0xd4af37,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.6
+      emissive: 0xb89128,
+      emissiveIntensity: 0.6,
+      roughness: 0.2,
+      metalness: 0.85
     });
-    const icoMesh = new THREE.Mesh(icoGeom, icoMat);
-    coreGroup.add(icoMesh);
+    const coreMesh = new THREE.Mesh(octGeom, octMat);
+    coreGroup.add(coreMesh);
 
-    const sphereGeom = new THREE.SphereGeometry(0.25, 16, 16);
-    const sphereMat = new THREE.MeshBasicMaterial({
-      color: 0xfcedc5,
-      transparent: true,
-      opacity: 0.8
-    });
-    const sphereMesh = new THREE.Mesh(sphereGeom, sphereMat);
-    coreGroup.add(sphereMesh);
+    // Target Crosshair Beams
+    const crossMat = new THREE.LineBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.35 });
+    const crossPoints = [
+      new THREE.Vector3(-0.8, 0, 0), new THREE.Vector3(0.8, 0, 0),
+      new THREE.Vector3(0, -0.8, 0), new THREE.Vector3(0, 0.8, 0),
+      new THREE.Vector3(0, 0, -0.8), new THREE.Vector3(0, 0, 0.8)
+    ];
+    const crossGeom = new THREE.BufferGeometry().setFromPoints(crossPoints);
+    const crossLines = new THREE.LineSegments(crossGeom, crossMat);
+    coreGroup.add(crossLines);
 
-    this.hologramCore = coreGroup;
+    this.hologramCore = {
+      group: coreGroup,
+      ring1: ring1,
+      ring2: ring2,
+      core: coreMesh
+    };
     this.liveFramingGroup.add(coreGroup);
 
     // 2. Trajectory points for drone flight path spline
@@ -323,9 +516,10 @@ class ModelViewer {
       const angle = (i / count) * Math.PI * 2;
       const x = Math.sin(angle) * radius;
       const z = Math.cos(angle) * radius;
-      const y = Math.sin(i * 0.8) * 0.35 + 0.1;
+      const y = Math.sin(i * 0.9) * 0.38 + 0.15;
 
-      trajectoryPoints.push(new THREE.Vector3(x, y, z));
+      const pos = new THREE.Vector3(x, y, z);
+      trajectoryPoints.push(pos);
 
       const cardGroup = new THREE.Group();
       cardGroup.position.set(x, y, z);
@@ -337,9 +531,10 @@ class ModelViewer {
       textureLoader.load(objUrl, (tex) => {
         tex.generateMipmaps = true;
         const aspect = tex.image.width / tex.image.height || 1.33;
-        const w = 0.55;
+        const w = 0.46;
         const h = w / aspect;
 
+        // Photo thumbnail plane
         const planeGeom = new THREE.PlaneGeometry(w, h);
         const planeMat = new THREE.MeshBasicMaterial({
           map: tex,
@@ -348,81 +543,140 @@ class ModelViewer {
         const planeMesh = new THREE.Mesh(planeGeom, planeMat);
         cardGroup.add(planeMesh);
 
-        // Frame border
-        const frameGeom = new THREE.EdgesGeometry(planeGeom);
-        const frameMat = new THREE.LineBasicMaterial({ color: 0xd4af37 });
-        const frameLine = new THREE.LineSegments(frameGeom, frameMat);
-        cardGroup.add(frameLine);
-
-        // Frustum pyramid
-        const frustumGeom = new THREE.ConeGeometry(w * 0.7, 0.4, 4);
-        const frustumMat = new THREE.MeshBasicMaterial({
-          color: 0xb89128,
+        // Holographic Glass Border
+        const borderGeom = new THREE.PlaneGeometry(w * 1.04, h * 1.04);
+        const borderMat = new THREE.MeshBasicMaterial({
+          color: 0xd4af37,
           wireframe: true,
           transparent: true,
-          opacity: 0.4
+          opacity: 0.6
         });
-        const frustumMesh = new THREE.Mesh(frustumGeom, frustumMat);
-        frustumMesh.rotation.x = Math.PI / 2;
-        frustumMesh.position.z = -0.2;
-        cardGroup.add(frustumMesh);
+        const borderMesh = new THREE.Mesh(borderGeom, borderMat);
+        borderMesh.position.z = -0.001;
+        cardGroup.add(borderMesh);
+
+        // Sleek 4-ray optical camera frustum to center lens node
+        const lensApex = new THREE.Vector3(0, 0, -0.25);
+        const halfW = w / 2;
+        const halfH = h / 2;
+        const frustumPoints = [
+          // 4 corners of plane to apex
+          new THREE.Vector3(-halfW, -halfH, 0), lensApex,
+          new THREE.Vector3(halfW, -halfH, 0), lensApex,
+          new THREE.Vector3(halfW, halfH, 0), lensApex,
+          new THREE.Vector3(-halfW, halfH, 0), lensApex
+        ];
+        const frustumGeom = new THREE.BufferGeometry().setFromPoints(frustumPoints);
+        const frustumMat = new THREE.LineBasicMaterial({
+          color: 0xd4af37,
+          transparent: true,
+          opacity: 0.45
+        });
+        const frustumLines = new THREE.LineSegments(frustumGeom, frustumMat);
+        cardGroup.add(frustumLines);
+
+        // Glowing Apex Camera Lens Node
+        const lensGeom = new THREE.SphereGeometry(0.02, 12, 12);
+        const lensMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const lensMesh = new THREE.Mesh(lensGeom, lensMat);
+        lensMesh.position.copy(lensApex);
+        cardGroup.add(lensMesh);
       });
 
-      // Targeting laser ray
-      const lineMat = new THREE.LineBasicMaterial({
+      // Ground Altitude Drop Tether Line & Target Footprint
+      const groundY = -0.65;
+      const tetherPoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(x, groundY, z)];
+      const tetherGeom = new THREE.BufferGeometry().setFromPoints(tetherPoints);
+      const tetherMat = new THREE.LineDashedMaterial({
         color: 0xd4af37,
+        dashSize: 0.05,
+        gapSize: 0.04,
         transparent: true,
-        opacity: 0.35
+        opacity: 0.3
       });
-      const linePoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(0, 0, 0)];
-      const lineGeom = new THREE.BufferGeometry().setFromPoints(linePoints);
-      const laserLine = new THREE.Line(lineGeom, lineMat);
-      this.liveFramingGroup.add(laserLine);
+      const tetherLine = new THREE.Line(tetherGeom, tetherMat);
+      tetherLine.computeLineDistances();
+      this.liveFramingGroup.add(tetherLine);
+
+      // Small ground target ring
+      const groundRingGeom = new THREE.RingGeometry(0.04, 0.06, 16);
+      const groundRingMat = new THREE.MeshBasicMaterial({
+        color: 0xd4af37,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.4
+      });
+      const groundRing = new THREE.Mesh(groundRingGeom, groundRingMat);
+      groundRing.position.set(x, groundY + 0.002, z);
+      groundRing.rotation.x = Math.PI / 2;
+      this.liveFramingGroup.add(groundRing);
+
+      // Subtle Center Targeting Ray
+      const centerRayPoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(0, 0, 0)];
+      const centerRayGeom = new THREE.BufferGeometry().setFromPoints(centerRayPoints);
+      const centerRayMat = new THREE.LineBasicMaterial({
+        color: 0x38bdf8,
+        transparent: true,
+        opacity: 0.18
+      });
+      const centerRay = new THREE.Line(centerRayGeom, centerRayMat);
+      this.liveFramingGroup.add(centerRay);
 
       this.liveFramingGroup.add(cardGroup);
     }
 
-    // 3. Drone Flight Trajectory Path Spline
+    // 3. Drone Flight Trajectory Path Spline & Animated Tracer Particle
     if (trajectoryPoints.length > 2) {
-      const curve = new THREE.CatmullRomCurve3(trajectoryPoints, true);
-      const curvePoints = curve.getPoints(100);
-      const curveGeom = new THREE.BufferGeometry().setFromPoints(curvePoints);
-      const curveMat = new THREE.LineBasicMaterial({ color: 0xd4af37, opacity: 0.7, transparent: true });
-      const pathLine = new THREE.Line(curveGeom, curveMat);
+      this.flightSplineCurve = new THREE.CatmullRomCurve3(trajectoryPoints, true);
+      const splinePoints = this.flightSplineCurve.getPoints(120);
+      const splineGeom = new THREE.BufferGeometry().setFromPoints(splinePoints);
+      const splineMat = new THREE.LineBasicMaterial({
+        color: 0xd4af37,
+        opacity: 0.85,
+        transparent: true
+      });
+      const pathLine = new THREE.Line(splineGeom, splineMat);
       this.liveFramingGroup.add(pathLine);
+
+      // Glowing Flight Path Tracer Orb
+      const tracerGeom = new THREE.SphereGeometry(0.05, 16, 16);
+      const tracerMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+      this.flightTracerMesh = new THREE.Mesh(tracerGeom, tracerMat);
+      this.liveFramingGroup.add(this.flightTracerMesh);
     }
 
     this.scene.add(this.liveFramingGroup);
 
-    this.camera.position.set(0, 2.5, 4.8);
+    this.camera.position.set(0, 2.4, 4.8);
     this.camera.lookAt(0, 0, 0);
     if (this.controls) {
       this.controls.target.set(0, 0, 0);
       this.controls.autoRotate = true;
-      this.controls.autoRotateSpeed = 1.5;
+      this.controls.autoRotateSpeed = 1.2;
     }
 
     const statsBadge = document.getElementById('viewer-stats-badge');
     if (statsBadge) {
-      statsBadge.textContent = `Drone Flight Stream • ${count} Keyframes Mapped`;
+      statsBadge.textContent = `UAV Flight Stream • ${count} Keyframes Calibrated`;
     }
   }
 
   updateLiveFramingStage(stageName, progress) {
-    if (!this.hologramCore) return;
+    if (!this.hologramCore || !this.hologramCore.core) return;
     const stage = (stageName || '').toLowerCase();
     
     let color = 0xd4af37; // Gold
     if (stage.includes('match') || stage.includes('pair')) {
-      color = 0xfcedc5;
-    } else if (stage.includes('refine') || stage.includes('optim')) {
-      color = 0xb89128;
-    } else if (stage.includes('export') || stage.includes('scene')) {
-      color = 0x10b981;
+      color = 0x38bdf8; // Cyan
+    } else if (stage.includes('refine') || stage.includes('optim') || stage.includes('converge')) {
+      color = 0xf59e0b; // Amber
+    } else if (stage.includes('export') || stage.includes('scene') || stage.includes('complete')) {
+      color = 0x10b981; // Emerald
     }
 
-    if (this.hologramCore.children[0] && this.hologramCore.children[0].material) {
-      this.hologramCore.children[0].material.color.setHex(color);
+    if (this.hologramCore.core.material) {
+      this.hologramCore.core.material.color.setHex(color);
+      this.hologramCore.core.material.emissive.setHex(color);
     }
   }
 
@@ -438,6 +692,8 @@ class ModelViewer {
       });
       this.liveFramingGroup = null;
       this.hologramCore = null;
+      this.flightSplineCurve = null;
+      this.flightTracerMesh = null;
     }
 
     this._objectUrlsToRevoke.forEach(url => URL.revokeObjectURL(url));
@@ -536,7 +792,7 @@ class ModelViewer {
   _updateStatsBadge(pointCount, format) {
     const statsBadge = document.getElementById('viewer-stats-badge');
     if (statsBadge) {
-      const formattedCount = pointCount > 0 ? `${(pointCount / 1000).toFixed(1)}k Points` : '3D Geometry';
+      const formattedCount = pointCount > 0 ? `${(pointCount / 1000).toFixed(1)}k Splats` : '3D Geometry';
       statsBadge.textContent = `${format} • ${formattedCount} • Metric Accurate`;
     }
   }
@@ -544,7 +800,7 @@ class ModelViewer {
   _createPointMaterial(hasVertexColors = true) {
     const isSmooth = this.pointStyle === 'smooth';
     const baseRadius = this.sceneBoundingRadius || 1.5;
-    const computedSize = Math.max(0.002, baseRadius * 0.007 * this.pointSize);
+    const computedSize = Math.max(0.003, baseRadius * 0.0075 * this.pointSize);
 
     return new THREE.PointsMaterial({
       size: computedSize,
@@ -617,13 +873,13 @@ class ModelViewer {
       this._fixPointCloud(pointsObj);
     });
 
-    if (this.gridHelper) {
-      this.gridHelper.position.set(center.x, box.min.y - 0.02, center.z);
-      this.gridHelper.scale.set(maxDim * 0.4, 1, maxDim * 0.4);
+    if (this.gridGroup) {
+      this.gridGroup.position.set(center.x, box.min.y - 0.03, center.z);
+      this.gridGroup.scale.set(maxDim * 0.45, 1, maxDim * 0.45);
     }
 
     const fov = this.camera.fov * (Math.PI / 180);
-    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.6;
+    let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2)) * 1.55;
     cameraZ = Math.max(cameraZ, 0.5);
 
     this.camera.position.set(center.x, center.y + maxDim * 0.35, center.z + cameraZ);
@@ -655,9 +911,9 @@ class ModelViewer {
   }
 
   toggleGrid() {
-    if (!this.gridHelper) return false;
-    this.gridHelper.visible = !this.gridHelper.visible;
-    return this.gridHelper.visible;
+    if (!this.gridGroup) return false;
+    this.gridGroup.visible = !this.gridGroup.visible;
+    return this.gridGroup.visible;
   }
 
   toggleBackground() {
@@ -665,10 +921,11 @@ class ModelViewer {
     const theme = this.themes[this.currentThemeIndex];
     if (this.scene) {
       this.scene.background = new THREE.Color(theme.bg);
+      if (this.scene.fog) {
+        this.scene.fog.color.setHex(theme.bg);
+      }
     }
-    if (this.gridHelper) {
-      this.gridHelper.material.color = new THREE.Color(theme.grid1);
-    }
+    this._buildGeospatialGrid();
     return theme.name;
   }
 
@@ -719,7 +976,7 @@ class ModelViewer {
   updatePointSize(size) {
     this.pointSize = parseFloat(size);
     const baseRadius = this.sceneBoundingRadius || 1.5;
-    const computedSize = Math.max(0.002, baseRadius * 0.007 * this.pointSize);
+    const computedSize = Math.max(0.003, baseRadius * 0.0075 * this.pointSize);
 
     this._pointObjects.forEach((pointsObj) => {
       if (pointsObj.material) {

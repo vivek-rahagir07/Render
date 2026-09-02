@@ -296,66 +296,81 @@
       <!-- STEP 2: 3D Geospatial Viewer & Live Neural Analysis Studio -->
       <section id="viewer-section" class="view-panel">
         <div class="viewer-container">
+          <!-- Tactical Viewport Corner Brackets -->
+          <div class="hud-bracket bracket-tl"></div>
+          <div class="hud-bracket bracket-tr"></div>
+          <div class="hud-bracket bracket-bl"></div>
+          <div class="hud-bracket bracket-br"></div>
+          
+          <!-- Viewport Vignette Depth Mask -->
+          <div class="viewport-vignette"></div>
+
           <!-- 3D Canvas Viewport -->
           <div id="three-canvas-container" class="canvas-container">
             <div id="viewer-loading-overlay" class="viewer-overlay hidden">
               <div class="loading-spinner"></div>
-              <span>Synthesizing High-Resolution 3D Point Cloud & Mesh...</span>
+              <span class="loading-label">Synthesizing High-Resolution 3D Point Cloud & Mesh...</span>
             </div>
           </div>
 
-          <!-- Top Viewer Header -->
+          <!-- Top Viewer Header HUD Bar -->
           <div class="viewer-top-bar">
             <div class="viewer-meta-info">
-              <h2 id="viewer-header-title" class="viewer-scene-title">Geospatial 3D Studio</h2>
-              <span id="viewer-stats-badge" class="stats-badge">3D Point Cloud • Ready</span>
+              <div class="meta-title-row">
+                <span class="live-dot-beacon"></span>
+                <h2 id="viewer-header-title" class="viewer-scene-title">Geospatial 3D Studio</h2>
+              </div>
+              <span id="viewer-stats-badge" class="stats-badge">UAV Flight Stream • Calibrated</span>
             </div>
 
             <div class="viewer-actions">
               <!-- Format Switcher -->
               <div class="format-toggle-group" id="format-toggle-group">
-                <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">View GLB</button>
-                <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">View PLY</button>
+                <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">GLB</button>
+                <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">PLY</button>
               </div>
 
               <!-- 3D Measurement Ruler Tool Toggle -->
-              <button type="button" id="measure-tool-btn" class="btn btn-secondary btn-sm" title="Measure Distance & Heights in 3D">
+              <button type="button" id="measure-tool-btn" class="btn btn-hud-action btn-sm" title="Measure Distance & Elevation in 3D">
                 <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M2 12h20M2 12l5-5M2 12l5 5M22 12l-5-5M22 12l-5 5"></path>
                 </svg>
-                <span id="measure-btn-text">Ruler (Measure)</span>
+                <span id="measure-btn-text">Ruler</span>
               </button>
 
-              <button type="button" id="snapshot-btn" class="btn btn-secondary btn-sm" title="Capture High-Res Snapshot">
+              <button type="button" id="snapshot-btn" class="btn btn-hud-action btn-sm" title="Capture High-Res Snapshot">
                 <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
                 </svg>
-                Snap
+                <span>Snap</span>
               </button>
 
-              <button type="button" id="download-glb-btn" class="btn btn-primary btn-sm">
-                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                GLB
-              </button>
-              <button type="button" id="download-ply-btn" class="btn btn-secondary btn-sm">
-                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                  <polyline points="7 10 12 15 17 10"></polyline>
-                  <line x1="12" y1="15" x2="12" y2="3"></line>
-                </svg>
-                PLY
-              </button>
+              <div class="btn-download-group">
+                <button type="button" id="download-glb-btn" class="btn btn-primary btn-sm" title="Download 3D GLB Model">
+                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>GLB</span>
+                </button>
+                <button type="button" id="download-ply-btn" class="btn btn-hud-action btn-sm" title="Download Dense PLY Point Cloud">
+                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                  </svg>
+                  <span>PLY</span>
+                </button>
+              </div>
+
               <button type="button" id="new-recon-btn" class="btn btn-outline btn-sm">
                 <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                New Mission
+                <span>New Mission</span>
               </button>
             </div>
           </div>
@@ -375,7 +390,7 @@
               <div class="hud-header">
                 <div class="hud-status-badge">
                   <span class="hud-pulse-dot"></span>
-                  <span id="hud-stage-title">Neural Reconstruction in Progress</span>
+                  <span id="hud-stage-title">Neural Reconstruction</span>
                 </div>
                 <span id="hud-timer" class="hud-timer">00:00</span>
               </div>
@@ -388,7 +403,7 @@
 
               <!-- HUD Footer -->
               <div class="hud-footer">
-                <button type="button" id="hud-toggle-logs-btn" class="btn btn-secondary btn-sm">
+                <button type="button" id="hud-toggle-logs-btn" class="btn btn-hud-action btn-sm">
                   <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <polyline points="4 17 10 11 4 5"></polyline>
                     <line x1="12" y1="19" x2="20" y2="19"></line>
@@ -492,11 +507,11 @@
 
           <!-- Quick Navigation Hints -->
           <div class="viewer-hints">
-            <span>🖱️ Left Click: Orbit</span>
-            <span>•</span>
-            <span>🖱️ Right Click: Pan</span>
-            <span>•</span>
-            <span>📜 Scroll: Zoom</span>
+            <span class="hint-item"><span class="hint-kbd">L-Click</span> Orbit</span>
+            <span class="hint-sep">/</span>
+            <span class="hint-item"><span class="hint-kbd">R-Click</span> Pan</span>
+            <span class="hint-sep">/</span>
+            <span class="hint-item"><span class="hint-kbd">Scroll</span> Zoom</span>
           </div>
         </div>
       </section>
