@@ -538,6 +538,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const precisionFilterSelect = document.getElementById('precision-filter-select');
+
   // --- On Job Completed ---
   async function onJobCompleted(job) {
     if (livePipelineHud) livePipelineHud.classList.add('hidden');
@@ -550,11 +552,35 @@ document.addEventListener('DOMContentLoaded', () => {
       ? job.output_files.glb 
       : `/storage/jobs/${job.job_id}/outputs/scene.glb`;
 
+    // Reset precision select dropdown to default clean scene
+    if (precisionFilterSelect) {
+      precisionFilterSelect.value = 'scene.glb';
+    }
+
     try {
       await state.viewer.loadModel(glbUrl);
     } catch (err) {
       alert(`Error loading GLB into 3D viewer: ${err.message}`);
     }
+  }
+
+  // --- Precision & Confidence Filter Selector ---
+  if (precisionFilterSelect) {
+    precisionFilterSelect.addEventListener('change', async (e) => {
+      if (!state.currentJobId) return;
+      const targetFilename = e.target.value || 'scene.glb';
+      const targetUrl = `/storage/jobs/${state.currentJobId}/outputs/${targetFilename}`;
+      
+      try {
+        await state.viewer.loadModel(targetUrl, null, 'glb');
+        if (viewGlbBtn && viewPlyBtn) {
+          viewGlbBtn.classList.add('active');
+          viewPlyBtn.classList.remove('active');
+        }
+      } catch (err) {
+        console.error('Failed to load precision model:', err);
+      }
+    });
   }
 
   // --- 3D Viewer Toolbar Handlers ---

@@ -324,10 +324,21 @@
             </div>
 
             <div class="viewer-actions">
-              <!-- Format Switcher -->
+              <!-- Format & Precision Tier Selectors -->
               <div class="format-toggle-group" id="format-toggle-group">
                 <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">GLB</button>
                 <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">PLY</button>
+              </div>
+
+              <!-- Denoise & Precision Selector -->
+              <div class="precision-select-group" id="precision-select-group">
+                <select id="precision-filter-select" class="precision-select" title="Precision & Denoising Filter Level">
+                  <option value="scene.glb" selected>✨ Pristine (Clean)</option>
+                  <option value="scene_ultra.glb">🎯 Ultra Precision (4.5x)</option>
+                  <option value="scene_clean.glb">💎 High Precision (3.5x)</option>
+                  <option value="scene_balanced.glb">⚖️ Balanced (2.5x)</option>
+                  <option value="scene_dense.glb">🌐 Dense Full Scene</option>
+                </select>
               </div>
 
               <!-- 3D Measurement Ruler Tool Toggle -->

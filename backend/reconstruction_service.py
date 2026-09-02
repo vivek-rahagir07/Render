@@ -348,19 +348,19 @@ class ReconstructionService:
                     session = None
 
             def process_single(p: Path):
-                out_p = masked_dir / f"{p.stem}.jpg"
+                out_p = masked_dir / f"{p.stem}.png"
                 try:
                     with Image.open(p) as img:
                         img_rgb = img.convert("RGB")
                         if session:
-                            res = rembg.remove(img_rgb, session=session, bgcolor=(255, 255, 255, 255))
+                            res = rembg.remove(img_rgb, session=session)
                         else:
-                            res = rembg.remove(img_rgb, bgcolor=(255, 255, 255, 255))
-                        res = res.convert("RGB")
-                        res.save(out_p, "JPEG", quality=95)
+                            res = rembg.remove(img_rgb)
+                        # Save with alpha channel so background pixels are masked out in 3D
+                        res.save(out_p, "PNG")
                 except Exception as ex:
                     # Fallback to copy original image
-                    shutil.copy2(p, out_p)
+                    shutil.copy2(p, masked_dir / f"{p.stem}{p.suffix}")
 
             with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
                 futures = [executor.submit(process_single, p) for p in image_paths]
@@ -484,6 +484,8 @@ class ReconstructionService:
             "--execution_mode", exec_mode,
             "--cam_size", str(cam_size),
             "--num_mem_imgs", str(num_mem_imgs),
+            "--min_conf_thr", "3.0",
+            "--flying_edges_thr", "0.06",
             "--file_type", "glb"
         ]
 
@@ -541,8 +543,8 @@ class ReconstructionService:
                 elif "global alignment" in lower or "optimizing" in lower or "refinement" in lower:
                     progress_counter = min(progress_counter + 5, 80)
                     self._update_progress(job_id, progress_counter, "Optimizing", "Optimizing 3D camera poses & scene geometry...")
-                elif "exporting 3d scene" in lower or "scene_" in lower:
-                    self._update_progress(job_id, 85, "Exporting", "Generating 3D model files...")
+                elif "exporting" in lower or "clean" in lower or "scene" in lower:
+                    self._update_progress(job_id, 85, "Exporting", "Denoising & generating clean high-precision 3D files...")
 
             process.stdout.close()
             return_code = process.wait()
@@ -557,7 +559,7 @@ class ReconstructionService:
                 raise RuntimeError(f"MUSt3R process exited with code {return_code}")
 
             # Exporting stage: ensure both scene.glb and scene.ply exist
-            self._update_progress(job_id, 90, "Exporting", "Finalizing GLB & PLY models...")
+            self._update_progress(job_id, 90, "Exporting", "Finalizing high-precision GLB & PLY models...")
             with self._lock:
                 job.status = JobStatus.EXPORTING
 
@@ -567,10 +569,10 @@ class ReconstructionService:
                 job.status = JobStatus.COMPLETED
                 job.progress = 100
                 job.stage = "Completed"
-                job.message = "3D reconstruction finished successfully!"
+                job.message = "High-precision 3D reconstruction finished successfully!"
                 job.completed_at = datetime.utcnow().isoformat()
 
-            self._append_log(job_id, "Job finished successfully! Models ready.")
+            self._append_log(job_id, "Job finished successfully! High-precision models ready.")
 
         except Exception as e:
             logger.error(f"Error during reconstruction for job {job_id}: {e}", exc_info=True)
@@ -584,22 +586,24 @@ class ReconstructionService:
 
     def _postprocess_models(self, job_id: str, out_dir: Path):
         """
-        Locates the optimal generated GLB (clean confidence threshold) and produces a standard scene.glb and scene.ply.
+        Locates the optimal generated GLB (clean high-precision confidence threshold) and produces a standard scene.glb and scene.ply.
         """
         main_glb = out_dir / "scene.glb"
         main_ply = out_dir / "scene.ply"
 
-        # Check for clean confidence models in preferred order: 1.5 -> 2.0 -> 1.05
+        # Check for clean confidence models in preferred order: clean 3.0 -> ultra 4.5 -> balanced 2.5
         preferred_candidates = [
-            out_dir / "scene_1.5.glb",
-            out_dir / "scene_2.0.glb",
-            out_dir / "scene_1.05.glb",
-            out_dir / "scene_2.5.glb"
+            out_dir / "scene_clean.glb",
+            out_dir / "scene_3.0.glb",
+            out_dir / "scene_ultra.glb",
+            out_dir / "scene_balanced.glb",
+            out_dir / "scene_2.5.glb",
+            out_dir / "scene.glb"
         ]
 
         selected_glb = None
         for candidate in preferred_candidates:
-            if candidate.is_file() and candidate.stat().st_size > 50000:
+            if candidate.is_file() and candidate.stat().st_size > 30000:
                 selected_glb = candidate
                 break
 
@@ -608,7 +612,7 @@ class ReconstructionService:
             if glb_files:
                 selected_glb = glb_files[0]
 
-        if selected_glb:
+        if selected_glb and selected_glb != main_glb:
             shutil.copyfile(selected_glb, main_glb)
             self._append_log(job_id, f"Primary GLB selected from {selected_glb.name} (filtered clean geometry)")
 
@@ -637,6 +641,11 @@ class ReconstructionService:
             confidence_map[name] = f"/storage/jobs/{job_id}/outputs/{c_file.name}"
         if confidence_map:
             output_files["confidence_levels"] = confidence_map
+
+        with self._lock:
+            job = self.jobs.get(job_id)
+            if job:
+                job.output_files = output_files
 
         with self._lock:
             job = self.jobs.get(job_id)

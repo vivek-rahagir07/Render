@@ -1227,6 +1227,37 @@ body[data-theme="light"] .icon-moon { display: block; color: var(--gold-600); }
   box-shadow: 0 0 12px var(--gold-glow);
 }
 
+.precision-select-group {
+  display: flex;
+  align-items: center;
+}
+
+.precision-select {
+  background: rgba(10, 13, 20, 0.82);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-top: 1px solid rgba(212, 175, 55, 0.35);
+  color: var(--gold-400);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.precision-select:hover {
+  border-color: var(--gold-400);
+  box-shadow: 0 0 12px rgba(212, 175, 55, 0.2);
+}
+
+.precision-select option {
+  background: #0b0e14;
+  color: #f1f5f9;
+}
+
 .btn-hud-action {
   background: rgba(10, 13, 20, 0.82);
   backdrop-filter: blur(20px);

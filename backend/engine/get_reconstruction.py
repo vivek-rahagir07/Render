@@ -2,7 +2,12 @@
 # Copyright (C) 2025-present Naver Corporation. All rights reserved.
 #
 # --------------------------------------------------------
-# MUSt3R demo executable for exporting reconstructions
+# MUSt3R High-Precision 3D Reconstruction & Clean Exporter
+# Features:
+#   - 2D Depth Gradient Discontinuity Filter (Eliminates flying edge slices)
+#   - Alpha Mask / Subject Isolation Intersect (Purges background artifacts)
+#   - Statistical Outlier Removal (SOR, purges isolated floating noise dots)
+#   - Multi-Tier Precision Export (Clean 3.0, Ultra 4.0, Balanced 2.5, Dense 2.0)
 # --------------------------------------------------------
 import os
 import sys
@@ -10,16 +15,21 @@ import argparse
 import pickle
 import traceback
 
+import numpy as np
 import torch
+from scipy.spatial import cKDTree
+import trimesh
+from scipy.spatial.transform import Rotation
+from PIL import Image
+
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as pl
 
 torch.backends.cuda.matmul.allow_tf32 = True  # for gpu >= Ampere and pytorch >= 1.12
 
 
 def get_args_parser():
-    parser = argparse.ArgumentParser(description="MUSt3R 3D Scene Reconstruction Executable")
+    parser = argparse.ArgumentParser(description="MUSt3R High-Precision 3D Scene Reconstruction Executable")
     parser.add_argument("--image_size", type=int, default=512, choices=[512, 224], help="image size")
     parser.add_argument("--image_dir", required=True, type=str, help="input image directory")
     parser.add_argument("--output", required=True, type=str, help="output directory")
@@ -38,13 +48,168 @@ def get_args_parser():
     parser.add_argument("--local_context_size", type=int, default=0)
     parser.add_argument("--keyframe_interval", type=int, default=3)
     parser.add_argument("--subsample", type=int, default=2)
-    parser.add_argument("--min_conf_keyframe", type=float, default=1.5)
+    parser.add_argument("--min_conf_keyframe", type=float, default=2.0)
     parser.add_argument("--keyframe_overlap_thr", type=float, default=0.05)
     parser.add_argument("--overlap_percentile", type=float, default=85)
     parser.add_argument("--cam_size", type=float, default=0.05)
     parser.add_argument("--camera_conf_thr", type=float, default=0.0)
     parser.add_argument("--file_type", type=str, default="glb", choices=["glb", "ply"])
+    parser.add_argument("--min_conf_thr", type=float, default=3.0, help="Clean confidence threshold (default: 3.0)")
+    parser.add_argument("--flying_edges_thr", type=float, default=0.06, help="Depth discontinuity step threshold")
     return parser
+
+
+def apply_fast_sor(pts, colors=None, k=16, std_ratio=1.15):
+    """
+    Applies Statistical Outlier Removal (SOR) to purge stray noise dots and detached floaters.
+    """
+    if len(pts) < 80:
+        return pts, colors
+
+    try:
+        tree = cKDTree(pts)
+        dists, _ = tree.query(pts, k=min(k, len(pts)), workers=-1)
+        mean_dists = np.mean(dists[:, 1:], axis=1)  # Exclude self at index 0
+        mu = np.mean(mean_dists)
+        sigma = np.std(mean_dists)
+        valid = mean_dists <= (mu + std_ratio * sigma)
+        
+        filtered_pts = pts[valid]
+        filtered_colors = colors[valid] if colors is not None else None
+        return filtered_pts, filtered_colors
+    except Exception as e:
+        print(f"[Notice] SOR filter bypass: {e}")
+        return pts, colors
+
+
+def filter_flying_edges(pts3d_np, conf_np, step_thr=0.06):
+    """
+    Filters out flying edge / slicing plane boundary tears where depth gradients jump abruptly.
+    """
+    H, W, _ = pts3d_np.shape
+    
+    diff_x = np.linalg.norm(pts3d_np[:, 1:, :] - pts3d_np[:, :-1, :], axis=-1)
+    diff_y = np.linalg.norm(pts3d_np[1:, :, :] - pts3d_np[:-1, :, :], axis=-1)
+    
+    edge_x = np.zeros((H, W), dtype=bool)
+    edge_y = np.zeros((H, W), dtype=bool)
+    
+    # Relative depth-scaled threshold
+    depth = np.abs(pts3d_np[:, :, 2])
+    thr_map_x = np.maximum(depth[:, :-1] * step_thr, 0.02)
+    thr_map_y = np.maximum(depth[:-1, :] * step_thr, 0.02)
+    
+    edge_x[:, :-1] = diff_x > thr_map_x
+    edge_y[:-1, :] = diff_y > thr_map_y
+    
+    return edge_x | edge_y
+
+
+def to_numpy(x):
+    """Safely converts tensors, lists, and dicts to numpy arrays."""
+    if isinstance(x, torch.Tensor):
+        return x.detach().cpu().numpy()
+    elif isinstance(x, (list, tuple)):
+        return [to_numpy(v) for v in x]
+    elif isinstance(x, dict):
+        return {k: to_numpy(v) for k, v in x.items()}
+    elif isinstance(x, np.ndarray):
+        return x
+    return np.array(x)
+
+
+def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb",
+                           flying_edges_thr=0.06, cam_size=0.05, verbose=True):
+    """
+    Exports a high-precision, clean 3D scene GLB/PLY free of background slices, floaters, and noise dots.
+    """
+    from dust3r.viz import OPENGL, add_scene_cam, CAM_COLORS
+
+    x_out, imgs = scene.x_out, scene.imgs
+    focals, cams2world = scene.focals, scene.cams2world
+    nimgs = len(imgs)
+
+    pts3d_list = [x_out[i]['pts3d'].cpu().numpy() for i in range(nimgs)]
+    conf_list = [x_out[i]['conf'].cpu().numpy() for i in range(nimgs)]
+    imgs_np = to_numpy(imgs)
+    focals_np = to_numpy(focals)
+    cams2world_np = to_numpy(cams2world)
+
+    all_pts = []
+    all_cols = []
+
+    for i in range(nimgs):
+        pts = pts3d_list[i]
+        conf = conf_list[i]
+        img = imgs_np[i]
+
+        # 1. Base Confidence Mask
+        mask = conf >= min_conf_thr
+
+        # 2. Check for alpha channel in original image or transparent/dark background
+        if img.shape[-1] == 4:
+            alpha_mask = img[:, :, 3] > 0.3
+            mask = mask & alpha_mask
+
+        # 3. Flying Edges / Slicing Plane Discontinuity Filter
+        if flying_edges_thr > 0.0:
+            edge_mask = filter_flying_edges(pts, conf, step_thr=flying_edges_thr)
+            mask = mask & (~edge_mask)
+
+        valid_pts = pts[mask]
+        valid_cols = img[mask][:, :3]  # Keep RGB
+
+        if len(valid_pts) > 0:
+            all_pts.append(valid_pts)
+            all_cols.append(valid_cols)
+
+    if not all_pts:
+        print(f"[Warning] No points met threshold {min_conf_thr}, trying fallback with min_conf_thr=1.8")
+        return None
+
+    cat_pts = np.concatenate(all_pts, axis=0)
+    cat_cols = np.concatenate(all_cols, axis=0)
+
+    # 4. Statistical Outlier Removal (SOR) to purge stray noise dots
+    clean_pts, clean_cols = apply_fast_sor(cat_pts, cat_cols, k=16, std_ratio=1.15)
+
+    # Build Trimesh scene
+    scene_3d = trimesh.Scene()
+    pct = trimesh.PointCloud(clean_pts.reshape(-1, 3), colors=clean_cols.reshape(-1, 3))
+    scene_3d.add_geometry(pct)
+
+    # Add camera frustums
+    for i, pose_c2w in enumerate(cams2world_np):
+        try:
+            camera_edge_color = CAM_COLORS[i % len(CAM_COLORS)]
+            focal_val = np.atleast_1d(focals_np[i])
+            add_scene_cam(
+                scene_3d,
+                pose_c2w,
+                camera_edge_color,
+                imgs_np[i][:, :, :3],
+                focal_val,
+                imsize=imgs_np[i].shape[1::-1],
+                screen_width=cam_size
+            )
+        except Exception as cam_err:
+            pass
+
+    # Orientation alignment
+    rot = np.eye(4)
+    rot[:3, :3] = Rotation.from_euler('y', np.deg2rad(180)).as_matrix()
+    scene_3d.apply_transform(np.linalg.inv(cams2world_np[0] @ OPENGL @ rot))
+
+    outfile = os.path.join(outdir, filename)
+    if verbose:
+        print(f"Exporting clean 3D scene ({len(clean_pts)} points) -> {outfile}")
+
+    if filename.endswith(".ply"):
+        pct.export(file_obj=outfile, file_type="ply")
+    else:
+        scene_3d.export(file_obj=outfile)
+
+    return outfile
 
 
 def main():
@@ -73,7 +238,7 @@ def main():
     try:
         from must3r.model import load_model
         from must3r.model.blocks.attention import toggle_memory_efficient_attention, has_xformers
-        from must3r.demo.gradio import get_reconstructed_scene, get_3D_model_from_scene
+        from must3r.demo.gradio import get_reconstructed_scene
     except ImportError as e:
         print(f"[MUSt3R Engine Error] Could not import must3r: {e}", file=sys.stderr)
         print("Ensure MUST3R_ROOT is in PYTHONPATH and submodules are initialized.", file=sys.stderr)
@@ -115,7 +280,6 @@ def main():
     )
 
     num_mem_imgs = min(args.num_mem_imgs, len(images))
-    min_conf_thr = 1.05
     cam_size = args.cam_size
     execution_mode = args.execution_mode
 
@@ -126,7 +290,8 @@ def main():
 
     print(f"[MUSt3R Engine] Reconstructing {len(images)} views (mode: {execution_mode}, size: {args.image_size}px, bs: {args.max_bs})...")
 
-    scene, outfile = get_reconstructed_scene(
+    # Reconstruct scene with initial broad threshold to retain full geometry
+    scene, _ = get_reconstructed_scene(
         outdir=args.output,
         viser_server=None,
         should_save_glb=False,
@@ -137,7 +302,7 @@ def main():
         image_size=args.image_size,
         amp=args.amp,
         filelist=images,
-        min_conf_thr=min_conf_thr,
+        min_conf_thr=1.05,
         as_pointcloud=True,
         transparent_cams=False,
         local_pointmaps=False,
@@ -157,49 +322,78 @@ def main():
         overlap_percentile=args.overlap_percentile
     )
 
-    # Export multi-confidence thresholds
-    threshold_list = [6.0, 5.0, 4.0, 3.0, 2.5, 2.0, 1.5, min_conf_thr]
-    saved_any = False
-    for thr in threshold_list:
-        try:
-            outfile = get_3D_model_from_scene(
-                outdir=args.output,
-                verbose=True,
-                scene=scene,
-                min_conf_thr=thr,
-                as_pointcloud=True,
-                transparent_cams=False,
-                cam_size=cam_size,
-                filename=f"scene_{thr}.{args.file_type}"
-            )
-            saved_any = True
-        except Exception as e:
-            continue
+    # 1. Export Clean Primary scene.glb and scene.ply with gradient discontinuity + SOR filtering
+    target_clean_conf = max(2.5, args.min_conf_thr)
+    print(f"[Clean Exporter] Generating pristine primary model (Confidence: {target_clean_conf}, SOR: ON, Edge Filter: ON)...")
+    
+    primary_glb = export_clean_scene_glb(
+        args.output,
+        scene,
+        min_conf_thr=target_clean_conf,
+        filename="scene.glb",
+        flying_edges_thr=args.flying_edges_thr,
+        cam_size=cam_size,
+        verbose=True
+    )
+    
+    # Also export primary scene.ply
+    export_clean_scene_glb(
+        args.output,
+        scene,
+        min_conf_thr=target_clean_conf,
+        filename="scene.ply",
+        flying_edges_thr=args.flying_edges_thr,
+        cam_size=cam_size,
+        verbose=True
+    )
 
-    # Also save the primary scene.glb / scene.ply
-    try:
-        get_3D_model_from_scene(
-            outdir=args.output,
-            verbose=True,
-            scene=scene,
-            min_conf_thr=min_conf_thr,
-            as_pointcloud=True,
-            transparent_cams=False,
-            cam_size=cam_size,
-            filename=f"scene.{args.file_type}"
-        )
-        saved_any = True
-    except Exception as e:
-        print(f"[Warning] Could not export standard scene.{args.file_type}: {e}")
+    # 2. Export Multi-Tier Precision Levels for user selection in viewer
+    precision_tiers = [
+        (4.5, "scene_ultra.glb"),
+        (3.5, "scene_clean.glb"),
+        (2.5, "scene_balanced.glb"),
+        (1.8, "scene_dense.glb"),
+        (5.0, "scene_5.0.glb"),
+        (3.0, "scene_3.0.glb"),
+        (2.0, "scene_2.0.glb"),
+        (1.5, "scene_1.5.glb"),
+    ]
+
+    for conf_val, fname in precision_tiers:
+        try:
+            export_clean_scene_glb(
+                args.output,
+                scene,
+                min_conf_thr=conf_val,
+                filename=fname,
+                flying_edges_thr=args.flying_edges_thr,
+                cam_size=cam_size,
+                verbose=False
+            )
+        except Exception:
+            continue
 
     with open(os.path.join(args.output, "scene.pkl"), "wb") as f:
         pickle.dump(scene, f)
 
-    if saved_any:
-        print(f"SUCCESS: 3D scene reconstructed and saved to {args.output}")
+    if primary_glb and os.path.isfile(primary_glb):
+        print(f"SUCCESS: High-precision clean 3D scene saved to {primary_glb}")
         sys.exit(0)
     else:
-        print("[Error] No 3D model could be exported from scene.", file=sys.stderr)
+        # Fallback to 2.0 if points were very sparse
+        fallback_glb = export_clean_scene_glb(
+            args.output,
+            scene,
+            min_conf_thr=2.0,
+            filename="scene.glb",
+            flying_edges_thr=0.08,
+            cam_size=cam_size,
+            verbose=True
+        )
+        if fallback_glb and os.path.isfile(fallback_glb):
+            print(f"SUCCESS: Clean 3D scene exported with fallback threshold to {fallback_glb}")
+            sys.exit(0)
+        print("[Error] Could not export 3D model from scene.", file=sys.stderr)
         sys.exit(1)
 
 
