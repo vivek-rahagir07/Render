@@ -47,10 +47,10 @@ class ModelViewer {
     this.isAutoRotating = false;
     this.currentThemeIndex = 0;
     this.themes = [
-      { name: 'Noir & Gold', bg: 0x050608, grid1: 0xd4af37, grid2: 0x161a24, ring: 0xd4af37 },
-      { name: 'Cyber Obsidian', bg: 0x020306, grid1: 0x38bdf8, grid2: 0x0e1726, ring: 0x38bdf8 },
-      { name: 'Studio Slate', bg: 0x0c0e14, grid1: 0xfacc15, grid2: 0x1e2433, ring: 0xfacc15 },
-      { name: 'Ivory Studio', bg: 0xf5f6fa, grid1: 0xd4af37, grid2: 0xd6d8e2, ring: 0xd4af37 }
+      { name: 'Tactical Cyan', bg: 0x06080D, grid1: 0x00E5FF, grid2: 0x151D29, ring: 0x00E5FF },
+      { name: 'Deep Blue', bg: 0x06080D, grid1: 0x4D7CFE, grid2: 0x0D1119, ring: 0x4D7CFE },
+      { name: 'Amber Ops', bg: 0x06080D, grid1: 0xF6C453, grid2: 0x151D29, ring: 0xF6C453 },
+      { name: 'Matrix Green', bg: 0x06080D, grid1: 0x20D3A2, grid2: 0x0D1119, ring: 0x20D3A2 }
     ];
 
     // Texture cache for circular soft splats
@@ -96,7 +96,7 @@ class ModelViewer {
     canvas.height = 128;
     const ctx = canvas.getContext('2d');
 
-    ctx.strokeStyle = 'rgba(212, 175, 55, 0.9)';
+    ctx.strokeStyle = 'rgba(0, 229, 255, 0.9)';
     ctx.lineWidth = 4;
     ctx.strokeRect(4, 4, 120, 120);
 
@@ -175,7 +175,7 @@ class ModelViewer {
     fillLight.position.set(-8, 6, -6);
     this.scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xd4af37, 0.7);
+    const rimLight = new THREE.DirectionalLight(0x00E5FF, 0.7);
     rimLight.position.set(0, -10, 2);
     this.scene.add(rimLight);
 
@@ -263,7 +263,7 @@ class ModelViewer {
       map: this.circleTexture,
       transparent: true,
       opacity: 0.4,
-      color: 0xd4af37,
+      color: 0x00E5FF,
       depthWrite: false
     });
 
@@ -386,7 +386,7 @@ class ModelViewer {
     markerGroup.position.copy(point);
 
     const dotGeom = new THREE.SphereGeometry(0.04, 16, 16);
-    const dotMat = new THREE.MeshBasicMaterial({ color: 0xd4af37 });
+    const dotMat = new THREE.MeshBasicMaterial({ color: 0x00E5FF });
     const dotMesh = new THREE.Mesh(dotGeom, dotMat);
     markerGroup.add(dotMesh);
 
@@ -466,13 +466,13 @@ class ModelViewer {
     
     // Outer Torus Ring 1
     const tGeom1 = new THREE.TorusGeometry(0.55, 0.012, 16, 64);
-    const tMat1 = new THREE.MeshBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.75 });
+    const tMat1 = new THREE.MeshBasicMaterial({ color: 0x00E5FF, transparent: true, opacity: 0.75 });
     const ring1 = new THREE.Mesh(tGeom1, tMat1);
     coreGroup.add(ring1);
 
     // Inner Torus Ring 2
     const tGeom2 = new THREE.TorusGeometry(0.42, 0.01, 16, 64);
-    const tMat2 = new THREE.MeshBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.65 });
+    const tMat2 = new THREE.MeshBasicMaterial({ color: 0x4D7CFE, transparent: true, opacity: 0.65 });
     const ring2 = new THREE.Mesh(tGeom2, tMat2);
     ring2.rotation.x = Math.PI / 4;
     coreGroup.add(ring2);
@@ -480,8 +480,8 @@ class ModelViewer {
     // Core Octahedron Crystal
     const octGeom = new THREE.OctahedronGeometry(0.24, 0);
     const octMat = new THREE.MeshStandardMaterial({
-      color: 0xd4af37,
-      emissive: 0xb89128,
+      color: 0x00E5FF,
+      emissive: 0x4D7CFE,
       emissiveIntensity: 0.6,
       roughness: 0.2,
       metalness: 0.85
@@ -490,7 +490,7 @@ class ModelViewer {
     coreGroup.add(coreMesh);
 
     // Target Crosshair Beams
-    const crossMat = new THREE.LineBasicMaterial({ color: 0xd4af37, transparent: true, opacity: 0.35 });
+    const crossMat = new THREE.LineBasicMaterial({ color: 0x00E5FF, transparent: true, opacity: 0.35 });
     const crossPoints = [
       new THREE.Vector3(-0.8, 0, 0), new THREE.Vector3(0.8, 0, 0),
       new THREE.Vector3(0, -0.8, 0), new THREE.Vector3(0, 0.8, 0),
@@ -546,7 +546,7 @@ class ModelViewer {
         // Holographic Glass Border
         const borderGeom = new THREE.PlaneGeometry(w * 1.04, h * 1.04);
         const borderMat = new THREE.MeshBasicMaterial({
-          color: 0xd4af37,
+          color: 0x00E5FF,
           wireframe: true,
           transparent: true,
           opacity: 0.6
@@ -568,7 +568,7 @@ class ModelViewer {
         ];
         const frustumGeom = new THREE.BufferGeometry().setFromPoints(frustumPoints);
         const frustumMat = new THREE.LineBasicMaterial({
-          color: 0xd4af37,
+          color: 0x00E5FF,
           transparent: true,
           opacity: 0.45
         });
@@ -577,7 +577,7 @@ class ModelViewer {
 
         // Glowing Apex Camera Lens Node
         const lensGeom = new THREE.SphereGeometry(0.02, 12, 12);
-        const lensMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+        const lensMat = new THREE.MeshBasicMaterial({ color: 0x4D7CFE });
         const lensMesh = new THREE.Mesh(lensGeom, lensMat);
         lensMesh.position.copy(lensApex);
         cardGroup.add(lensMesh);
@@ -588,7 +588,7 @@ class ModelViewer {
       const tetherPoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(x, groundY, z)];
       const tetherGeom = new THREE.BufferGeometry().setFromPoints(tetherPoints);
       const tetherMat = new THREE.LineDashedMaterial({
-        color: 0xd4af37,
+        color: 0x00E5FF,
         dashSize: 0.05,
         gapSize: 0.04,
         transparent: true,
@@ -601,7 +601,7 @@ class ModelViewer {
       // Small ground target ring
       const groundRingGeom = new THREE.RingGeometry(0.04, 0.06, 16);
       const groundRingMat = new THREE.MeshBasicMaterial({
-        color: 0xd4af37,
+        color: 0x00E5FF,
         side: THREE.DoubleSide,
         transparent: true,
         opacity: 0.4
@@ -615,7 +615,7 @@ class ModelViewer {
       const centerRayPoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(0, 0, 0)];
       const centerRayGeom = new THREE.BufferGeometry().setFromPoints(centerRayPoints);
       const centerRayMat = new THREE.LineBasicMaterial({
-        color: 0x38bdf8,
+        color: 0x4D7CFE,
         transparent: true,
         opacity: 0.18
       });
@@ -631,7 +631,7 @@ class ModelViewer {
       const splinePoints = this.flightSplineCurve.getPoints(120);
       const splineGeom = new THREE.BufferGeometry().setFromPoints(splinePoints);
       const splineMat = new THREE.LineBasicMaterial({
-        color: 0xd4af37,
+        color: 0x00E5FF,
         opacity: 0.85,
         transparent: true
       });
@@ -640,7 +640,7 @@ class ModelViewer {
 
       // Glowing Flight Path Tracer Orb
       const tracerGeom = new THREE.SphereGeometry(0.05, 16, 16);
-      const tracerMat = new THREE.MeshBasicMaterial({ color: 0x38bdf8 });
+      const tracerMat = new THREE.MeshBasicMaterial({ color: 0x4D7CFE });
       this.flightTracerMesh = new THREE.Mesh(tracerGeom, tracerMat);
       this.liveFramingGroup.add(this.flightTracerMesh);
     }
@@ -665,13 +665,13 @@ class ModelViewer {
     if (!this.hologramCore || !this.hologramCore.core) return;
     const stage = (stageName || '').toLowerCase();
     
-    let color = 0xd4af37; // Gold
+    let color = 0x00E5FF; // Cyan primary
     if (stage.includes('match') || stage.includes('pair')) {
-      color = 0x38bdf8; // Cyan
+      color = 0x4D7CFE; // Blue
     } else if (stage.includes('refine') || stage.includes('optim') || stage.includes('converge')) {
-      color = 0xf59e0b; // Amber
+      color = 0xF6C453; // Amber
     } else if (stage.includes('export') || stage.includes('scene') || stage.includes('complete')) {
-      color = 0x10b981; // Emerald
+      color = 0x20D3A2; // Success
     }
 
     if (this.hologramCore.core.material) {
@@ -806,7 +806,7 @@ class ModelViewer {
       size: computedSize,
       sizeAttenuation: true,
       vertexColors: hasVertexColors,
-      color: hasVertexColors ? 0xffffff : 0xd4af37,
+      color: hasVertexColors ? 0xffffff : 0x00E5FF,
       map: isSmooth ? this.circleTexture : null,
       transparent: isSmooth,
       alphaTest: isSmooth ? 0.02 : 0.0,
@@ -835,7 +835,7 @@ class ModelViewer {
           child.userData.isCameraFrustum = true;
           if (child.material) {
             child.material.wireframe = true;
-            child.material.color = new THREE.Color(0xd4af37);
+            child.material.color = new THREE.Color(0x00E5FF);
           }
         }
       }
