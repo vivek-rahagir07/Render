@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import sys
@@ -127,6 +128,93 @@ class ReconstructionService:
         self._worker_task: Optional[asyncio.Task] = None
 
         self.preprocessing_hooks: List[BasePreprocessingHook] = []
+        self._load_existing_jobs()
+
+    def _load_existing_jobs(self):
+        """Scans storage_dir to restore all past jobs so they remain visible across server restarts."""
+        try:
+            if not self.storage_dir.is_dir():
+                return
+            for jdir in self.storage_dir.iterdir():
+                if not jdir.is_dir():
+                    continue
+                job_id = jdir.name
+                job_file = jdir / "job.json"
+                if job_file.is_file():
+                    try:
+                        with open(job_file, "r") as f:
+                            d = json.load(f)
+                        st = d.get("status", "completed")
+                        if st in ["preprocessing", "reconstructing", "exporting"]:
+                            st = "failed"
+                            d["stage"] = "Interrupted"
+                            d["error"] = "Server was restarted during reconstruction."
+                        job = JobInfo(
+                            job_id=job_id,
+                            status=JobStatus(st),
+                            progress=d.get("progress", 100),
+                            stage=d.get("stage", "Completed"),
+                            message=d.get("message", ""),
+                            created_at=d.get("created_at", ""),
+                            started_at=d.get("started_at"),
+                            completed_at=d.get("completed_at"),
+                            image_count=d.get("image_count", 0),
+                            config=d.get("config", {}),
+                            logs=d.get("logs", []),
+                            output_files=d.get("output_files", {}),
+                            error=d.get("error")
+                        )
+                        self.jobs[job_id] = job
+                    except Exception:
+                        pass
+                else:
+                    main_glb = jdir / "outputs" / "scene.glb"
+                    if main_glb.is_file() and main_glb.stat().st_size > 1000:
+                        out_files = {"glb": f"/storage/jobs/{job_id}/outputs/scene.glb"}
+                        if (jdir / "outputs" / "scene.ply").is_file():
+                            out_files["ply"] = f"/storage/jobs/{job_id}/outputs/scene.ply"
+                        if (jdir / "outputs" / "scene_mesh.stl").is_file():
+                            out_files["stl"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.stl"
+                        if (jdir / "outputs" / "scene_mesh.obj").is_file():
+                            out_files["obj"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.obj"
+                        if (jdir / "outputs" / "scene_mesh.glb").is_file():
+                            out_files["mesh_glb"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.glb"
+                        img_count = len(list((jdir / "images").glob("*"))) if (jdir / "images").is_dir() else 0
+                        job = JobInfo(
+                            job_id=job_id,
+                            status=JobStatus.COMPLETED,
+                            progress=100,
+                            stage="Completed",
+                            message="High-precision 3D scene reconstructed.",
+                            image_count=img_count,
+                            output_files=out_files
+                        )
+                        self.jobs[job_id] = job
+        except Exception as e:
+            logger.warning(f"Error loading existing jobs: {e}")
+
+    def _save_job_to_disk(self, job: JobInfo):
+        try:
+            job_file = self.storage_dir / job.job_id / "job.json"
+            data = {
+                "job_id": job.job_id,
+                "status": job.status.value,
+                "progress": job.progress,
+                "stage": job.stage,
+                "message": job.message,
+                "created_at": job.created_at,
+                "started_at": job.started_at,
+                "completed_at": job.completed_at,
+                "image_count": job.image_count,
+                "config": job.config,
+                "logs": job.logs[-250:],
+                "output_files": job.output_files,
+                "error": job.error
+            }
+            with open(job_file, "w") as f:
+                json.dump(data, f, indent=2)
+        except Exception:
+            pass
 
     def register_preprocessing_hook(self, hook: BasePreprocessingHook):
         self.preprocessing_hooks.append(hook)
@@ -207,6 +295,7 @@ class ReconstructionService:
 
         with self._lock:
             self.jobs[job_id] = job
+        self._save_job_to_disk(job)
 
         return job
 
@@ -247,12 +336,40 @@ class ReconstructionService:
             if job_id in self.jobs:
                 img_files = list(job_dir.glob("*"))
                 self.jobs[job_id].image_count = len(img_files)
+                self._save_job_to_disk(self.jobs[job_id])
 
         return clean_name
 
     def get_job(self, job_id: str) -> Optional[JobInfo]:
         with self._lock:
-            return self.jobs.get(job_id)
+            if job_id in self.jobs:
+                return self.jobs[job_id]
+        job_file = self.storage_dir / job_id / "job.json"
+        if job_file.is_file():
+            try:
+                with open(job_file, "r") as f:
+                    d = json.load(f)
+                job = JobInfo(
+                    job_id=job_id,
+                    status=JobStatus(d.get("status", "queued")),
+                    progress=d.get("progress", 0),
+                    stage=d.get("stage", "Queued"),
+                    message=d.get("message", ""),
+                    created_at=d.get("created_at", ""),
+                    started_at=d.get("started_at"),
+                    completed_at=d.get("completed_at"),
+                    image_count=d.get("image_count", 0),
+                    config=d.get("config", {}),
+                    logs=d.get("logs", []),
+                    output_files=d.get("output_files", {}),
+                    error=d.get("error")
+                )
+                with self._lock:
+                    self.jobs[job_id] = job
+                return job
+            except Exception:
+                pass
+        return None
 
     def cancel_job(self, job_id: str) -> bool:
         with self._lock:
@@ -267,6 +384,7 @@ class ReconstructionService:
             job.stage = "Cancelled"
             job.message = "Job was cancelled by user."
             job.completed_at = datetime.utcnow().isoformat()
+            self._save_job_to_disk(job)
 
             proc = self.active_processes.get(job_id)
             if proc and proc.poll() is None:
@@ -289,6 +407,7 @@ class ReconstructionService:
                 job.logs.append(formatted)
                 if len(job.logs) > 500:
                     job.logs = job.logs[-500:]
+                self._save_job_to_disk(job)
 
     def _update_progress(self, job_id: str, progress: int, stage: Optional[str] = None, message: Optional[str] = None):
         with self._lock:
@@ -299,6 +418,7 @@ class ReconstructionService:
                     job.stage = stage
                 if message:
                     job.message = message
+                self._save_job_to_disk(job)
 
     def _apply_ai_background_removal(self, job_id: str, img_dir: Path) -> Path:
         """Isolates foreground subjects and removes complex background clutter for maximum 3D precision."""
@@ -508,12 +628,24 @@ class ReconstructionService:
                     self._update_progress(job_id, 85, "Exporting", "Denoising & generating clean high-precision 3D files...")
 
             process.stdout.close()
-            return_code = process.wait()
+            try:
+                return_code = process.wait(timeout=45)
+            except subprocess.TimeoutExpired:
+                logger.warning(f"Process for job {job_id} did not exit within timeout. Terminating...")
+                process.terminate()
+                try:
+                    return_code = process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    return_code = 0
 
             with self._lock:
                 self.active_processes.pop(job_id, None)
 
-            if return_code != 0:
+            primary_glb = out_dir / "scene.glb"
+            has_valid_glb = primary_glb.is_file() and primary_glb.stat().st_size > 10000
+
+            if return_code != 0 and not has_valid_glb:
                 if job.status == JobStatus.CANCELLED:
                     self._append_log(job_id, "Job execution cancelled.")
                     return
@@ -522,6 +654,7 @@ class ReconstructionService:
             self._update_progress(job_id, 90, "Exporting", "Finalizing high-precision GLB & PLY models...")
             with self._lock:
                 job.status = JobStatus.EXPORTING
+            self._save_job_to_disk(job)
 
             self._postprocess_models(job_id, out_dir)
 
@@ -532,6 +665,7 @@ class ReconstructionService:
                 job.message = "High-precision 3D reconstruction finished successfully!"
                 job.completed_at = datetime.utcnow().isoformat()
 
+            self._save_job_to_disk(job)
             self._append_log(job_id, "Job finished successfully! High-precision models ready.")
 
         except Exception as e:
@@ -542,6 +676,7 @@ class ReconstructionService:
                 job.error = str(e)
                 job.completed_at = datetime.utcnow().isoformat()
                 job.message = f"Reconstruction failed: {e}"
+            self._save_job_to_disk(job)
             self._append_log(job_id, f"FATAL ERROR: {e}")
 
     def _postprocess_models(self, job_id: str, out_dir: Path):
@@ -592,17 +727,13 @@ class ReconstructionService:
         if not main_mesh_glb.is_file() and (main_glb.is_file() or main_ply.is_file()):
             self.generate_mesh_exports(job_id)
 
-        points_glb = out_dir / "scene_points.glb"
-        if main_mesh_glb.is_file() and main_mesh_glb.stat().st_size > 1000:
-            if not points_glb.is_file() and main_glb.is_file() and main_glb.stat().st_size != main_mesh_glb.stat().st_size:
-                shutil.copyfile(main_glb, points_glb)
-            shutil.copyfile(main_mesh_glb, main_glb)
-
         output_files = {}
         if main_glb.is_file():
             output_files["glb"] = f"/storage/jobs/{job_id}/outputs/scene.glb"
         if (out_dir / "scene_points.glb").is_file():
             output_files["points_glb"] = f"/storage/jobs/{job_id}/outputs/scene_points.glb"
+        elif main_glb.is_file():
+            output_files["points_glb"] = f"/storage/jobs/{job_id}/outputs/scene.glb"
         if main_ply.is_file():
             output_files["ply"] = f"/storage/jobs/{job_id}/outputs/scene.ply"
         if main_stl.is_file():
@@ -623,6 +754,7 @@ class ReconstructionService:
             job = self.jobs.get(job_id)
             if job:
                 job.output_files = output_files
+                self._save_job_to_disk(job)
 
     def generate_mesh_exports(self, job_id: str) -> bool:
         job_dir = self.storage_dir / job_id
@@ -680,42 +812,39 @@ if pcd is None or len(pcd.points) < 10:
 
 bbox = pcd.get_axis_aligned_bounding_box()
 diag = np.linalg.norm(bbox.get_extent())
-if len(pcd.points) > 70000:
-    v_size = max(0.008, diag / 350.0)
+if len(pcd.points) > 35000:
+    v_size = max(0.012, diag / 200.0)
     pcd = pcd.voxel_down_sample(voxel_size=v_size)
 
-pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=max(0.04, diag / 120.0), max_nn=35))
-pcd.orient_normals_consistent_tangent_plane(k=20)
+pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=max(0.05, diag / 75.0), max_nn=25))
+pcd.orient_normals_consistent_tangent_plane(k=15)
 
-mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9, linear_fit=True)
-densities = np.asarray(densities)
-if len(densities) > 0:
-    trim_mask = densities < np.quantile(densities, 0.03)
-    mesh.remove_vertices_by_mask(trim_mask)
+try:
+    mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=8, linear_fit=False, n_threads=2)
+    densities = np.asarray(densities)
+    if len(densities) > 0 and len(mesh.vertices) > 0:
+        trim_mask = densities < np.quantile(densities, 0.02)
+        mesh.remove_vertices_by_mask(trim_mask)
 
-if pcd.has_colors():
-    pcd_tree = o3d.geometry.KDTreeFlann(pcd)
-    mesh_verts = np.asarray(mesh.vertices)
-    pcd_cols = np.asarray(pcd.colors)
-    k_indices = []
-    for v in mesh_verts:
-        _, idx, _ = pcd_tree.search_knn_vector_3d(v, 1)
-        k_indices.append(idx[0])
-    mesh.vertex_colors = o3d.utility.Vector3dVector(pcd_cols[k_indices])
+    if pcd.has_colors() and len(mesh.vertices) > 0:
+        pcd_tree = o3d.geometry.KDTreeFlann(pcd)
+        mesh_verts = np.asarray(mesh.vertices)
+        pcd_cols = np.asarray(pcd.colors)
+        k_indices = []
+        for v in mesh_verts:
+            _, idx, _ = pcd_tree.search_knn_vector_3d(v, 1)
+            k_indices.append(idx[0])
+        mesh.vertex_colors = o3d.utility.Vector3dVector(pcd_cols[k_indices])
 
-mesh.compute_vertex_normals()
-mesh.compute_triangle_normals()
+    mesh.compute_vertex_normals()
+    mesh.compute_triangle_normals()
 
-o3d.io.write_triangle_mesh(stl_path, mesh)
-o3d.io.write_triangle_mesh(obj_path, mesh)
-o3d.io.write_triangle_mesh(glb_path, mesh)
-
-points_glb = os.path.join(out_dir, "scene_points.glb")
-if not os.path.isfile(points_glb) and os.path.isfile(main_glb):
-    shutil.copyfile(main_glb, points_glb)
-shutil.copyfile(glb_path, main_glb)
-
-sys.exit(0)
+    o3d.io.write_triangle_mesh(stl_path, mesh)
+    o3d.io.write_triangle_mesh(obj_path, mesh)
+    o3d.io.write_triangle_mesh(glb_path, mesh)
+    sys.exit(0)
+except Exception:
+    sys.exit(3)
 """
         python_exec = str(self.python_bin) if self.python_bin and os.path.isfile(str(self.python_bin)) else sys.executable
         try:

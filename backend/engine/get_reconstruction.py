@@ -187,7 +187,11 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
         scene_3d.export(file_obj=outfile)
 
     if filename == "scene.glb":
-        export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=verbose)
+        try:
+            export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=verbose)
+        except Exception as e:
+            if verbose:
+                print(f"[Notice] Surface mesh generation bypassed: {e}")
 
     return outfile
 
@@ -195,11 +199,8 @@ def export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=Tr
     if len(clean_pts) < 10:
         return False
 
-    try:
-        import open3d as o3d
-    except ImportError:
+    def fallback_trimesh_hull():
         try:
-            import trimesh
             pts_homo = np.hstack([clean_pts, np.ones((len(clean_pts), 1))])
             pts_aligned = (pts_homo @ transform_mat.T)[:, :3]
             pct = trimesh.PointCloud(pts_aligned, colors=clean_cols)
@@ -207,9 +208,18 @@ def export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=Tr
             hull.export(os.path.join(outdir, "scene_mesh.obj"))
             hull.export(os.path.join(outdir, "scene_mesh.stl"))
             hull.export(os.path.join(outdir, "scene_mesh.glb"))
+            if verbose:
+                print("[Surface Meshing] Convex hull fallback exported successfully.")
             return True
-        except Exception:
+        except Exception as ex:
+            if verbose:
+                print(f"[Surface Meshing Warning] Convex hull failed: {ex}")
             return False
+
+    try:
+        import open3d as o3d
+    except ImportError:
+        return fallback_trimesh_hull()
 
     try:
         pts_homo = np.hstack([clean_pts, np.ones((len(clean_pts), 1))])
@@ -226,21 +236,33 @@ def export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=Tr
 
         bbox = pcd.get_axis_aligned_bounding_box()
         diag = np.linalg.norm(bbox.get_extent())
-        if len(pcd.points) > 70000:
-            v_size = max(0.008, diag / 350.0)
+        if diag <= 1e-6:
+            return fallback_trimesh_hull()
+
+        # Downsample to a safe, fast point count (max ~35k points)
+        # Prevents Open3D Poisson memory explosion and IsoSurface non-manifold loop bugs
+        if len(pcd.points) > 35000:
+            v_size = max(0.012, diag / 200.0)
             pcd = pcd.voxel_down_sample(voxel_size=v_size)
 
-        pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=max(0.04, diag / 120.0), max_nn=35))
-        pcd.orient_normals_consistent_tangent_plane(k=20)
+        pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=max(0.05, diag / 75.0), max_nn=25))
+        pcd.orient_normals_consistent_tangent_plane(k=15)
 
-        mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9, linear_fit=True)
+        # IMPORTANT FIX: linear_fit=False fixes Kazhdan's PoissonRecon 'Failed to close loop' bug!
+        # depth=8 produces a clean watertight manifold mesh fast without freezing or aborting.
+        mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(
+            pcd, depth=8, linear_fit=False, n_threads=2
+        )
 
         densities = np.asarray(densities)
-        if len(densities) > 0:
-            trim_mask = densities < np.quantile(densities, 0.03)
+        if len(densities) > 0 and len(mesh.vertices) > 0:
+            trim_mask = densities < np.quantile(densities, 0.02)
             mesh.remove_vertices_by_mask(trim_mask)
 
-        if pcd.has_colors():
+        if len(mesh.triangles) < 10:
+            return fallback_trimesh_hull()
+
+        if pcd.has_colors() and len(mesh.vertices) > 0:
             pcd_tree = o3d.geometry.KDTreeFlann(pcd)
             mesh_verts = np.asarray(mesh.vertices)
             pcd_cols = np.asarray(pcd.colors)
@@ -256,25 +278,18 @@ def export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=Tr
         stl_path = os.path.join(outdir, "scene_mesh.stl")
         obj_path = os.path.join(outdir, "scene_mesh.obj")
         glb_path = os.path.join(outdir, "scene_mesh.glb")
-        points_glb_path = os.path.join(outdir, "scene_points.glb")
-        main_glb_path = os.path.join(outdir, "scene.glb")
 
         o3d.io.write_triangle_mesh(stl_path, mesh)
         o3d.io.write_triangle_mesh(obj_path, mesh)
         o3d.io.write_triangle_mesh(glb_path, mesh)
-
-        import shutil
-        if os.path.isfile(main_glb_path) and not os.path.isfile(points_glb_path):
-            shutil.copyfile(main_glb_path, points_glb_path)
-        shutil.copyfile(glb_path, main_glb_path)
 
         if verbose:
             print(f"Exported dense solid mesh ({len(mesh.triangles)} triangles, {len(mesh.vertices)} vertices) -> {stl_path}, {obj_path}, {glb_path}")
         return True
     except Exception as e:
         if verbose:
-            print(f"[Warning] Surface meshing failed: {e}")
-        return False
+            print(f"[Warning] Open3D Poisson meshing failed ({e}), falling back to hull")
+        return fallback_trimesh_hull()
 
 def main():
     parser = get_args_parser()
