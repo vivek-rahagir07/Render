@@ -1,9 +1,7 @@
-import os
 import shutil
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import List, Optional
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 BACKEND_DIR = Path(__file__).resolve().parent
@@ -17,13 +15,13 @@ if str(BACKEND_DIR) not in sys.path:
 
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 try:
-    from backend.reconstruction_service import ReconstructionService, JobConfig, JobStatus
+    from backend.reconstruction_service import JobConfig, ReconstructionService
 except ImportError:
-    from reconstruction_service import ReconstructionService, JobConfig, JobStatus
+    from reconstruction_service import JobConfig, ReconstructionService
 
 service = ReconstructionService(base_storage_dir=str(STORAGE_DIR / "jobs"))
 
@@ -64,7 +62,7 @@ async def health_check():
 
 @app.post("/api/reconstruction/jobs")
 async def create_reconstruction_job(
-    files: List[UploadFile] = File(...),
+    files: list[UploadFile] = File(...),  # noqa: B008
     image_size: int = Form(512),
     device: str = Form("mps"),
     max_bs: int = Form(1),
@@ -112,8 +110,8 @@ async def create_reconstruction_job(
             shutil.rmtree(job_dir, ignore_errors=True)
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Failed to process file '{file.filename}': {str(e)}"
-            )
+                detail=f"Failed to process file '{file.filename}': {e}"
+            ) from e
 
     if saved_count < 2:
         raise HTTPException(
@@ -165,20 +163,41 @@ async def cancel_job(job_id: str):
 
 @app.get("/api/reconstruction/jobs/{job_id}/download/{format}")
 async def download_model(job_id: str, format: str):
-    """Downloads the generated 3D model in GLB or PLY format."""
+    """Downloads the generated 3D model in GLB, PLY, STL (3D Print), or OBJ (CAD) format."""
     format_lower = format.lower()
-    if format_lower not in ["glb", "ply"]:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Format must be 'glb' or 'ply'.")
+    allowed = ["glb", "ply", "stl", "obj", "mesh_glb"]
+    if format_lower not in allowed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Format must be one of: {', '.join(allowed)}."
+        )
 
-    file_path = service.storage_dir / job_id / "outputs" / f"scene.{format_lower}"
+    out_dir = service.storage_dir / job_id / "outputs"
+
+    if format_lower in ["stl", "obj", "mesh_glb"]:
+        target_name = f"scene_mesh.{ 'glb' if format_lower == 'mesh_glb' else format_lower }"
+        file_path = out_dir / target_name
+        if not file_path.is_file():
+            service.generate_mesh_exports(job_id)
+    else:
+        file_path = out_dir / f"scene.{format_lower}"
+
     if not file_path.is_file():
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Model in '{format_lower}' format not found for job {job_id}."
         )
 
-    media_type = "model/gltf-binary" if format_lower == "glb" else "application/octet-stream"
-    download_filename = f"reconstruction_{job_id[:8]}.{format_lower}"
+    media_types = {
+        "glb": "model/gltf-binary",
+        "mesh_glb": "model/gltf-binary",
+        "stl": "model/stl",
+        "obj": "model/obj",
+        "ply": "application/octet-stream"
+    }
+    ext = "glb" if format_lower == "mesh_glb" else format_lower
+    media_type = media_types.get(format_lower, "application/octet-stream")
+    download_filename = f"reconstruction_{job_id[:8]}_{'mesh' if format_lower in ['stl', 'obj', 'mesh_glb'] else 'scene'}.{ext}"
 
     return FileResponse(
         path=file_path,

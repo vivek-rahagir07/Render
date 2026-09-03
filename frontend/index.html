@@ -723,6 +723,22 @@
                   </svg>
                   <span>GLB</span>
                 </button>
+                <button type="button" id="download-stl-btn" class="btn btn-hud-action btn-sm" title="Download Watertight STL for 3D Printing (Cura / Bambu / Prusa)">
+                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                  </svg>
+                  <span>STL</span>
+                </button>
+                <button type="button" id="download-obj-btn" class="btn btn-hud-action btn-sm" title="Download Wavefront OBJ for CAD & Blender">
+                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                  </svg>
+                  <span>OBJ</span>
+                </button>
                 <button type="button" id="download-ply-btn" class="btn btn-hud-action btn-sm" title="Download Dense PLY Point Cloud">
                   <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
@@ -824,6 +840,15 @@
                 <circle cx="12" cy="12" r="4"></circle>
               </svg>
               <span id="point-style-label">Splats</span>
+            </button>
+
+            <button type="button" id="btn-toggle-mesh" class="dock-btn" title="Toggle Watertight Surface Mesh vs Point Cloud">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+              <span id="mesh-style-label">Mesh</span>
             </button>
 
             <button type="button" id="btn-toggle-bg" class="dock-btn" title="Cycle Atmosphere Theme">

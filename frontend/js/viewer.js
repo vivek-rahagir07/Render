@@ -638,6 +638,13 @@ class ModelViewer {
     }
     this._pointObjects = [];
 
+    this._currentUrl = url;
+    if (url.includes('scene_mesh.glb')) {
+      this.meshMode = true;
+    } else {
+      this.meshMode = false;
+    }
+
     const isPly = format.toLowerCase() === 'ply' || url.toLowerCase().endsWith('.ply');
 
     return new Promise((resolve, reject) => {
@@ -760,9 +767,48 @@ class ModelViewer {
             child.material.wireframe = true;
             child.material.color = new THREE.Color(0x00E5FF);
           }
+        } else if (vertexCount > CAMERA_FRUSTUM_MAX_VERTICES) {
+          child.userData.isSurfaceMesh = true;
+          const hasColors = child.geometry.attributes.color != null;
+          child.material = new THREE.MeshStandardMaterial({
+            vertexColors: hasColors,
+            roughness: 0.45,
+            metalness: 0.15,
+            side: THREE.DoubleSide
+          });
         }
       }
     });
+  }
+
+  async toggleMeshMode(jobId) {
+    if (!this.meshMode) {
+      this._previousModelUrl = this._currentUrl;
+      const meshUrl = jobId ? `/storage/jobs/${jobId}/outputs/scene_mesh.glb` : null;
+      if (meshUrl) {
+        try {
+          await this.loadModel(meshUrl, null, 'glb');
+          this.meshMode = true;
+          this._updateStatsBadge(0, 'Watertight Solid Mesh');
+          return true;
+        } catch (err) {
+          console.warn('Surface mesh not yet generated:', err);
+        }
+      }
+    } else {
+      if (this._previousModelUrl) {
+        try {
+          await this.loadModel(this._previousModelUrl, null, 'glb');
+          this.meshMode = false;
+          return false;
+        } catch (err) {
+          console.warn('Failed to revert to point cloud:', err);
+        }
+      }
+      this.meshMode = false;
+      return false;
+    }
+    return this.meshMode || false;
   }
 
   _fixPointCloud(pointsObj) {

@@ -1,5 +1,4 @@
 import asyncio
-import glob
 import logging
 import os
 import sys
@@ -13,7 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional, Any, Callable
+from typing import Any, Dict, List, Optional
 from PIL import Image
 
 logger = logging.getLogger("reconstruction_service")
@@ -336,7 +335,7 @@ class ReconstructionService:
                         else:
                             res = rembg.remove(img_rgb)
                         res.save(out_p, "PNG")
-                except Exception as ex:
+                except Exception:
                     shutil.copy2(p, masked_dir / f"{p.stem}{p.suffix}")
 
             with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
@@ -586,11 +585,24 @@ class ReconstructionService:
             except Exception as e:
                 self._append_log(job_id, f"PLY export notice: {e}")
 
+        main_stl = out_dir / "scene_mesh.stl"
+        main_obj = out_dir / "scene_mesh.obj"
+        main_mesh_glb = out_dir / "scene_mesh.glb"
+
+        if not main_stl.is_file() and (main_glb.is_file() or main_ply.is_file()):
+            self.generate_mesh_exports(job_id)
+
         output_files = {}
         if main_glb.is_file():
             output_files["glb"] = f"/storage/jobs/{job_id}/outputs/scene.glb"
         if main_ply.is_file():
             output_files["ply"] = f"/storage/jobs/{job_id}/outputs/scene.ply"
+        if main_stl.is_file():
+            output_files["stl"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.stl"
+        if main_obj.is_file():
+            output_files["obj"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.obj"
+        if main_mesh_glb.is_file():
+            output_files["mesh_glb"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.glb"
 
         confidence_map = {}
         for c_file in sorted(out_dir.glob("scene_*.glb")):
@@ -604,10 +616,113 @@ class ReconstructionService:
             if job:
                 job.output_files = output_files
 
-        with self._lock:
-            job = self.jobs.get(job_id)
-            if job:
-                job.output_files = output_files
+    def generate_mesh_exports(self, job_id: str) -> bool:
+        job_dir = self.storage_dir / job_id
+        out_dir = job_dir / "outputs"
+        main_stl = out_dir / "scene_mesh.stl"
+        main_obj = out_dir / "scene_mesh.obj"
+
+        if main_stl.is_file() and main_obj.is_file():
+            return True
+
+        self._append_log(job_id, "Generating watertight 3D surface mesh (STL / OBJ / GLB)...")
+
+        script = f"""
+import os, sys
+import numpy as np
+
+out_dir = {str(out_dir)!r}
+main_ply = os.path.join(out_dir, "scene.ply")
+main_glb = os.path.join(out_dir, "scene.glb")
+stl_path = os.path.join(out_dir, "scene_mesh.stl")
+obj_path = os.path.join(out_dir, "scene_mesh.obj")
+glb_path = os.path.join(out_dir, "scene_mesh.glb")
+
+try:
+    import open3d as o3d
+except ImportError:
+    sys.exit(1)
+
+pcd = None
+if os.path.isfile(main_ply) and os.path.getsize(main_ply) > 1000:
+    try:
+        pcd = o3d.io.read_point_cloud(main_ply)
+    except Exception:
+        pcd = None
+
+if pcd is None or len(pcd.points) < 50:
+    if os.path.isfile(main_glb):
+        try:
+            import trimesh
+            s = trimesh.load(main_glb)
+            for g in s.geometry.values():
+                if isinstance(g, trimesh.PointCloud) and len(g.vertices) > 20:
+                    pcd = o3d.geometry.PointCloud()
+                    pcd.points = o3d.utility.Vector3dVector(np.asarray(g.vertices))
+                    if hasattr(g, 'colors') and g.colors is not None:
+                        c = np.asarray(g.colors)[:, :3].astype(np.float64)
+                        if c.max() > 1.0: c /= 255.0
+                        pcd.colors = o3d.utility.Vector3dVector(c)
+                    break
+        except Exception:
+            pass
+
+if pcd is None or len(pcd.points) < 10:
+    sys.exit(2)
+
+bbox = pcd.get_axis_aligned_bounding_box()
+diag = np.linalg.norm(bbox.get_extent())
+if len(pcd.points) > 40000:
+    v_size = max(0.015, diag / 250.0)
+    pcd = pcd.voxel_down_sample(voxel_size=v_size)
+
+pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=max(0.05, diag / 100.0), max_nn=30))
+pcd.orient_normals_consistent_tangent_plane(k=15)
+
+mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=8)
+densities = np.asarray(densities)
+if len(densities) > 0:
+    trim_mask = densities < np.quantile(densities, 0.05)
+    mesh.remove_vertices_by_mask(trim_mask)
+
+mesh.compute_vertex_normals()
+mesh.compute_triangle_normals()
+
+o3d.io.write_triangle_mesh(stl_path, mesh)
+o3d.io.write_triangle_mesh(obj_path, mesh)
+
+try:
+    import trimesh
+    t_mesh = trimesh.Trimesh(
+        vertices=np.asarray(mesh.vertices),
+        faces=np.asarray(mesh.triangles),
+        vertex_normals=np.asarray(mesh.vertex_normals) if mesh.has_vertex_normals() else None,
+        vertex_colors=np.asarray(mesh.vertex_colors) if mesh.has_vertex_colors() else None
+    )
+    t_mesh.export(glb_path)
+except Exception:
+    o3d.io.write_triangle_mesh(glb_path, mesh)
+
+sys.exit(0)
+"""
+        python_exec = str(self.python_bin) if self.python_bin and os.path.isfile(str(self.python_bin)) else sys.executable
+        try:
+            res = subprocess.run([python_exec, "-c", script], capture_output=True, text=True, timeout=90)
+            if res.returncode == 0:
+                self._append_log(job_id, "Watertight 3D mesh exported successfully (STL, OBJ, GLB).")
+                with self._lock:
+                    job = self.jobs.get(job_id)
+                    if job and job.output_files:
+                        job.output_files["stl"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.stl"
+                        job.output_files["obj"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.obj"
+                        job.output_files["mesh_glb"] = f"/storage/jobs/{job_id}/outputs/scene_mesh.glb"
+                return True
+            else:
+                self._append_log(job_id, f"Mesh export warning (exit code {res.returncode}): {res.stderr.strip()[:200]}")
+                return False
+        except Exception as e:
+            self._append_log(job_id, f"Mesh generation subprocess exception: {e}")
+            return False
 
     async def submit_job(self, job_id: str):
         """Asynchronously queues the job for background execution."""

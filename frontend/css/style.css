@@ -1992,7 +1992,30 @@ body[data-theme="light"] .icon-moon { display: block; }
 .btn-download-group {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  background: var(--bg-surface-glass);
+  padding: 3px 4px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-subtle);
+}
+
+#download-stl-btn:hover {
+  border-color: #F6C453;
+  color: #F6C453;
+  box-shadow: 0 0 14px rgba(246, 196, 83, 0.35);
+}
+
+#download-obj-btn:hover {
+  border-color: #A78BFA;
+  color: #A78BFA;
+  box-shadow: 0 0 14px rgba(167, 139, 250, 0.35);
+}
+
+#btn-toggle-mesh.active {
+  background: linear-gradient(135deg, rgba(246, 196, 83, 0.25) 0%, rgba(233, 169, 47, 0.1) 100%);
+  border-color: #F6C453;
+  color: #F6C453;
+  box-shadow: 0 0 16px rgba(246, 196, 83, 0.35);
 }
 
 .measure-readout-hud {

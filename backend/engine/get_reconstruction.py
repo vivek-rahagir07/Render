@@ -10,7 +10,6 @@ import torch
 from scipy.spatial import cKDTree
 import trimesh
 from scipy.spatial.transform import Rotation
-from PIL import Image
 
 import matplotlib
 matplotlib.use('Agg')
@@ -170,12 +169,13 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
                 imsize=imgs_np[i].shape[1::-1],
                 screen_width=cam_size
             )
-        except Exception as cam_err:
+        except Exception:
             pass
 
     rot = np.eye(4)
     rot[:3, :3] = Rotation.from_euler('y', np.deg2rad(180)).as_matrix()
-    scene_3d.apply_transform(np.linalg.inv(cams2world_np[0] @ OPENGL @ rot))
+    transform_mat = np.linalg.inv(cams2world_np[0] @ OPENGL @ rot)
+    scene_3d.apply_transform(transform_mat)
 
     outfile = os.path.join(outdir, filename)
     if verbose:
@@ -186,7 +186,83 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
     else:
         scene_3d.export(file_obj=outfile)
 
+    if filename == "scene.glb":
+        export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=verbose)
+
     return outfile
+
+def export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=True):
+    if len(clean_pts) < 10:
+        return False
+
+    try:
+        import open3d as o3d
+    except ImportError:
+        try:
+            import trimesh
+            pts_homo = np.hstack([clean_pts, np.ones((len(clean_pts), 1))])
+            pts_aligned = (pts_homo @ transform_mat.T)[:, :3]
+            pct = trimesh.PointCloud(pts_aligned, colors=clean_cols)
+            hull = pct.convex_hull
+            hull.export(os.path.join(outdir, "scene_mesh.obj"))
+            hull.export(os.path.join(outdir, "scene_mesh.stl"))
+            hull.export(os.path.join(outdir, "scene_mesh.glb"))
+            return True
+        except Exception:
+            return False
+
+    try:
+        pts_homo = np.hstack([clean_pts, np.ones((len(clean_pts), 1))])
+        pts_aligned = (pts_homo @ transform_mat.T)[:, :3]
+
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(pts_aligned)
+        if clean_cols is not None and len(clean_cols) == len(clean_pts):
+            c = clean_cols.astype(np.float64)
+            if c.max() > 1.0:
+                c = c / 255.0
+            pcd.colors = o3d.utility.Vector3dVector(c)
+
+        pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.15, max_nn=30))
+        pcd.orient_normals_consistent_tangent_plane(k=15)
+
+        depth = 9 if len(clean_pts) > 20000 else 8
+        mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=depth)
+
+        densities = np.asarray(densities)
+        if len(densities) > 0:
+            trim_mask = densities < np.quantile(densities, 0.05)
+            mesh.remove_vertices_by_mask(trim_mask)
+
+        mesh.compute_vertex_normals()
+        mesh.compute_triangle_normals()
+
+        stl_path = os.path.join(outdir, "scene_mesh.stl")
+        obj_path = os.path.join(outdir, "scene_mesh.obj")
+        glb_path = os.path.join(outdir, "scene_mesh.glb")
+
+        o3d.io.write_triangle_mesh(stl_path, mesh)
+        o3d.io.write_triangle_mesh(obj_path, mesh)
+
+        try:
+            import trimesh
+            t_mesh = trimesh.Trimesh(
+                vertices=np.asarray(mesh.vertices),
+                faces=np.asarray(mesh.triangles),
+                vertex_normals=np.asarray(mesh.vertex_normals) if mesh.has_vertex_normals() else None,
+                vertex_colors=np.asarray(mesh.vertex_colors) if mesh.has_vertex_colors() else None
+            )
+            t_mesh.export(glb_path)
+        except Exception:
+            o3d.io.write_triangle_mesh(glb_path, mesh)
+
+        if verbose:
+            print(f"Exported watertight surface mesh ({len(mesh.triangles)} triangles) -> {stl_path}, {obj_path}, {glb_path}")
+        return True
+    except Exception as e:
+        if verbose:
+            print(f"[Warning] Surface meshing failed: {e}")
+        return False
 
 def main():
     parser = get_args_parser()

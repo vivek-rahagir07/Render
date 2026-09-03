@@ -73,6 +73,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const viewerHeaderTitle = document.getElementById('viewer-header-title');
 
   const downloadGlbBtn = document.getElementById('download-glb-btn');
+  const downloadStlBtn = document.getElementById('download-stl-btn');
+  const downloadObjBtn = document.getElementById('download-obj-btn');
   const downloadPlyBtn = document.getElementById('download-ply-btn');
   const viewGlbBtn = document.getElementById('view-glb-btn');
   const viewPlyBtn = document.getElementById('view-ply-btn');
@@ -84,6 +86,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnToggleGrid = document.getElementById('btn-toggle-grid');
   const btnPointStyle = document.getElementById('btn-point-style');
   const pointStyleLabel = document.getElementById('point-style-label');
+  const btnToggleMesh = document.getElementById('btn-toggle-mesh');
+  const meshStyleLabel = document.getElementById('mesh-style-label');
   const btnToggleBg = document.getElementById('btn-toggle-bg');
   const btnToggleCams = document.getElementById('btn-toggle-cams');
   const btnFullscreen = document.getElementById('btn-fullscreen');
@@ -709,17 +713,48 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  downloadGlbBtn.addEventListener('click', () => {
-    if (state.currentJobId) {
-      window.location.href = API.getDownloadUrl(state.currentJobId, 'glb');
-    }
-  });
+  if (downloadGlbBtn) {
+    downloadGlbBtn.addEventListener('click', () => {
+      if (state.currentJobId) {
+        window.location.href = API.getDownloadUrl(state.currentJobId, 'glb');
+      }
+    });
+  }
 
-  downloadPlyBtn.addEventListener('click', () => {
-    if (state.currentJobId) {
-      window.location.href = API.getDownloadUrl(state.currentJobId, 'ply');
-    }
-  });
+  if (downloadStlBtn) {
+    downloadStlBtn.addEventListener('click', () => {
+      if (state.currentJobId) {
+        window.location.href = API.getDownloadUrl(state.currentJobId, 'stl');
+      }
+    });
+  }
+
+  if (downloadObjBtn) {
+    downloadObjBtn.addEventListener('click', () => {
+      if (state.currentJobId) {
+        window.location.href = API.getDownloadUrl(state.currentJobId, 'obj');
+      }
+    });
+  }
+
+  if (downloadPlyBtn) {
+    downloadPlyBtn.addEventListener('click', () => {
+      if (state.currentJobId) {
+        window.location.href = API.getDownloadUrl(state.currentJobId, 'ply');
+      }
+    });
+  }
+
+  if (btnToggleMesh) {
+    btnToggleMesh.addEventListener('click', async () => {
+      if (!state.viewer) return;
+      const isMesh = await state.viewer.toggleMeshMode(state.currentJobId);
+      btnToggleMesh.classList.toggle('active', isMesh);
+      if (meshStyleLabel) {
+        meshStyleLabel.textContent = isMesh ? 'Solid' : 'Points';
+      }
+    });
+  }
 
   newReconBtn.addEventListener('click', () => {
     state.files = [];
