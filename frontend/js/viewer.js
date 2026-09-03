@@ -157,6 +157,7 @@ class ModelViewer {
 
     window.addEventListener('resize', () => this.onResize());
 
+    this._saveBaseLightIntensities();
     this.animate();
   }
 
@@ -963,6 +964,65 @@ class ModelViewer {
       });
     }
   }
+
+  /**
+   * Sets scene brightness by adjusting tone-mapping exposure and ambient light intensity.
+   * @param {number} value  0.2 – 4.0  (default 1.2)
+   */
+  setBrightness(value) {
+    const v = parseFloat(value);
+    if (this.renderer) {
+      this.renderer.toneMappingExposure = v;
+    }
+    // Also scale the ambient light so point clouds (which ignore tone mapping) brighten too
+    if (this.scene) {
+      this.scene.traverse((child) => {
+        if (child.isAmbientLight) {
+          child.intensity = Math.max(0.1, v * 1.1);
+        }
+        if (child.isDirectionalLight) {
+          // keep the ratio between lights but scale with brightness
+          child.intensity = child.userData._baseIntensity != null
+            ? child.userData._baseIntensity * (v / 1.2)
+            : child.intensity;
+        }
+      });
+    }
+  }
+
+  /**
+   * Stores base light intensities once so setBrightness can scale from them correctly.
+   * Called automatically inside init().
+   */
+  _saveBaseLightIntensities() {
+    if (this.scene) {
+      this.scene.traverse((child) => {
+        if (child.isDirectionalLight) {
+          child.userData._baseIntensity = child.intensity;
+        }
+      });
+    }
+  }
+
+  /**
+   * Toggles wireframe mode on all non-point-cloud meshes.
+   * @returns {boolean} new wireframe state
+   */
+  setWireframe(enabled) {
+    this._wireframeEnabled = enabled;
+    if (!this.currentModel) return enabled;
+    this.currentModel.traverse((child) => {
+      if (child.isMesh && !child.userData.isCameraFrustum) {
+        if (Array.isArray(child.material)) {
+          child.material.forEach(m => { m.wireframe = enabled; });
+        } else if (child.material) {
+          child.material.wireframe = enabled;
+        }
+      }
+    });
+    return enabled;
+  }
 }
 
 window.ModelViewer = ModelViewer;
+

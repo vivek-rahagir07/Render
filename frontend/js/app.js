@@ -794,4 +794,60 @@ document.addEventListener('DOMContentLoaded', () => {
     updateGalleryUI();
     showView('upload-section');
   });
+
+  /* ── Scene Controls Panel ──────────────────────────────────── */
+  const sceneCtrlToggle  = document.getElementById('scene-controls-toggle');
+  const sceneCtrlBody    = document.getElementById('scene-controls-body');
+  const sceneCtrlArrow   = document.getElementById('scene-ctrl-arrow');
+  const ctrlPointSize    = document.getElementById('ctrl-point-size');
+  const ctrlPointSizeVal = document.getElementById('ctrl-point-size-val');
+  const ctrlBrightness   = document.getElementById('ctrl-brightness');
+  const ctrlBrightnessVal= document.getElementById('ctrl-brightness-val');
+  const ctrlWireframeBtn = document.getElementById('ctrl-wireframe-btn');
+  const ctrlWireframeLbl = document.getElementById('ctrl-wireframe-label');
+
+  // Collapse / expand toggle
+  let sceneCtrlOpen = true;
+  if (sceneCtrlToggle && sceneCtrlBody) {
+    sceneCtrlToggle.addEventListener('click', () => {
+      sceneCtrlOpen = !sceneCtrlOpen;
+      sceneCtrlBody.classList.toggle('collapsed', !sceneCtrlOpen);
+      if (sceneCtrlArrow) {
+        sceneCtrlArrow.style.transform = sceneCtrlOpen ? '' : 'rotate(180deg)';
+      }
+    });
+  }
+
+  // Point size slider
+  if (ctrlPointSize) {
+    ctrlPointSize.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value).toFixed(1);
+      if (ctrlPointSizeVal) ctrlPointSizeVal.textContent = `${val}×`;
+      if (state.viewer) state.viewer.updatePointSize(val);
+    });
+  }
+
+  // Brightness slider
+  if (ctrlBrightness) {
+    ctrlBrightness.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value).toFixed(1);
+      if (ctrlBrightnessVal) {
+        ctrlBrightnessVal.textContent = `${val}×`;
+        ctrlBrightnessVal.classList.toggle('amber', true);
+      }
+      if (state.viewer) state.viewer.setBrightness(parseFloat(val));
+    });
+  }
+
+  // Wireframe toggle
+  let wireframeOn = false;
+  if (ctrlWireframeBtn) {
+    ctrlWireframeBtn.addEventListener('click', () => {
+      wireframeOn = !wireframeOn;
+      if (state.viewer) state.viewer.setWireframe(wireframeOn);
+      ctrlWireframeBtn.classList.toggle('active', wireframeOn);
+      if (ctrlWireframeLbl) ctrlWireframeLbl.textContent = wireframeOn ? 'Wireframe: On' : 'Wireframe: Off';
+    });
+  }
+  /* ─────────────────────────────────────────────────────────── */
 });

@@ -755,6 +755,73 @@
             </div>
           </div>
 
+          <!-- ── Scene Controls Panel ─────────────────────────────────────── -->
+          <div id="scene-controls-panel" class="scene-controls-panel">
+            <button type="button" id="scene-controls-toggle" class="scene-ctrl-toggle" title="Scene Controls">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15">
+                <circle cx="12" cy="12" r="3"></circle>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"></path>
+              </svg>
+              <span>Scene Controls</span>
+              <svg id="scene-ctrl-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="12" height="12" style="transition:transform .25s">
+                <polyline points="18 15 12 9 6 15"></polyline>
+              </svg>
+            </button>
+
+            <div id="scene-controls-body" class="scene-controls-body">
+
+              <!-- Point Size -->
+              <div class="ctrl-row">
+                <div class="ctrl-label-row">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" class="ctrl-icon">
+                    <circle cx="12" cy="12" r="4"></circle>
+                    <circle cx="4" cy="4" r="2"></circle>
+                    <circle cx="20" cy="20" r="2"></circle>
+                    <circle cx="4" cy="20" r="2"></circle>
+                    <circle cx="20" cy="4" r="2"></circle>
+                  </svg>
+                  <span class="ctrl-label">Point Size</span>
+                  <span id="ctrl-point-size-val" class="ctrl-val">1.0×</span>
+                </div>
+                <input type="range" id="ctrl-point-size" class="ctrl-slider" min="0.2" max="5.0" step="0.1" value="1.0">
+              </div>
+
+              <!-- Brightness -->
+              <div class="ctrl-row">
+                <div class="ctrl-label-row">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13" class="ctrl-icon">
+                    <circle cx="12" cy="12" r="5"></circle>
+                    <line x1="12" y1="1" x2="12" y2="3"></line>
+                    <line x1="12" y1="21" x2="12" y2="23"></line>
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                    <line x1="1" y1="12" x2="3" y2="12"></line>
+                    <line x1="21" y1="12" x2="23" y2="12"></line>
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                  </svg>
+                  <span class="ctrl-label">Brightness</span>
+                  <span id="ctrl-brightness-val" class="ctrl-val">1.2×</span>
+                </div>
+                <input type="range" id="ctrl-brightness" class="ctrl-slider slider-amber" min="0.2" max="4.0" step="0.1" value="1.2">
+              </div>
+
+              <!-- Wireframe / Mesh toggle -->
+              <div class="ctrl-row ctrl-row-btn">
+                <button type="button" id="ctrl-wireframe-btn" class="ctrl-toggle-btn">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="13" height="13">
+                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                    <polyline points="2 17 12 22 22 17"></polyline>
+                    <polyline points="2 12 12 17 22 12"></polyline>
+                  </svg>
+                  <span id="ctrl-wireframe-label">Wireframe: Off</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+          <!-- ─────────────────────────────────────────────────────────────── -->
+
           <div class="viewer-dock">
             <button type="button" id="btn-reset-cam" class="dock-btn" title="Reset Camera">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
