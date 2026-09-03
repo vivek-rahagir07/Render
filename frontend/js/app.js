@@ -12,87 +12,88 @@ document.addEventListener('DOMContentLoaded', () => {
     activeMode: 'video'
   };
 
-  const statusPill = document.getElementById('system-status-pill');
+  const statusPill     = document.getElementById('system-status-pill');
   const statusPillText = document.getElementById('status-pill-text');
 
-  const homeSection = document.getElementById('home-section');
+  const homeSection   = document.getElementById('home-section');
   const uploadSection = document.getElementById('upload-section');
   const viewerSection = document.getElementById('viewer-section');
 
-  const navBtnHome = document.getElementById('nav-btn-home');
+  const navBtnHome   = document.getElementById('nav-btn-home');
   const navBtnCreate = document.getElementById('nav-btn-create');
   const navBtnViewer = document.getElementById('nav-btn-viewer');
   const brandHomeLink = document.getElementById('brand-home-link');
 
-  const heroBtnExplore = document.getElementById('hero-btn-explore');
-  const heroBtnUpload = document.getElementById('hero-btn-upload');
+  const heroBtnExplore  = document.getElementById('hero-btn-explore');
+  const heroBtnUpload   = document.getElementById('hero-btn-upload');
   const bottomBtnUpload = document.getElementById('bottom-btn-upload');
   const bottomBtnExplore = document.getElementById('bottom-btn-explore');
-  const backToHomeBtn = document.getElementById('back-to-home-btn');
+  const backToHomeBtn   = document.getElementById('back-to-home-btn');
   const demoModelSelect = document.getElementById('demo-model-select');
 
-  const themeToggleBtn = document.getElementById('theme-toggle-btn');
+  const themeToggleBtn   = document.getElementById('theme-toggle-btn');
   const themeToggleLabel = document.getElementById('theme-toggle-label');
 
-  const tabDroneVideo = document.getElementById('tab-drone-video');
-  const tabPhotos = document.getElementById('tab-photos');
-  const dropzoneTitle = document.getElementById('dropzone-title');
+  const tabDroneVideo  = document.getElementById('tab-drone-video');
+  const tabPhotos      = document.getElementById('tab-photos');
+  const dropzoneTitle    = document.getElementById('dropzone-title');
   const dropzoneSubtitle = document.getElementById('dropzone-subtitle');
 
-  const dropzone = document.getElementById('dropzone');
-  const fileInput = document.getElementById('file-input');
-  const browseBtn = document.getElementById('browse-btn');
-  const videoExtractBar = document.getElementById('video-extract-bar');
+  const dropzone          = document.getElementById('dropzone');
+  const fileInput         = document.getElementById('file-input');
+  // NOTE: browse-btn reference is read lazily via querySelector so tab switches don't stale it
+  const videoExtractBar   = document.getElementById('video-extract-bar');
   const extractStatusText = document.getElementById('extract-status-text');
   const extractPercentText = document.getElementById('extract-percent-text');
   const extractProgressFill = document.getElementById('extract-progress-fill');
-  const galleryContainer = document.getElementById('gallery-container');
-  const imageGrid = document.getElementById('image-grid');
-  const imageCountNum = document.getElementById('image-count-num');
-  const clearAllBtn = document.getElementById('clear-all-btn');
-  const generateBtn = document.getElementById('generate-btn');
+  const galleryContainer  = document.getElementById('gallery-container');
+  const imageGrid         = document.getElementById('image-grid');
+  const imageCountNum     = document.getElementById('image-count-num');
+  const clearAllBtn       = document.getElementById('clear-all-btn');
+  const generateBtn       = document.getElementById('generate-btn');
 
-  const settingsToggle = document.getElementById('settings-toggle');
+  const settingsToggle  = document.getElementById('settings-toggle');
   const settingsContent = document.getElementById('settings-content');
-  const cfgImageSize = document.getElementById('cfg-image-size');
-  const cfgIterations = document.getElementById('cfg-iterations');
-  const iterVal = document.getElementById('iter-val');
-  const cfgMode = document.getElementById('cfg-mode');
-  const cfgDevice = document.getElementById('cfg-device');
+  const cfgImageSize    = document.getElementById('cfg-image-size');
+  const cfgIterations   = document.getElementById('cfg-iterations');
+  const iterVal         = document.getElementById('iter-val');
+  const cfgMode         = document.getElementById('cfg-mode');
+  const cfgDevice       = document.getElementById('cfg-device');
 
-  const livePipelineHud = document.getElementById('live-pipeline-hud');
-  const hudStageTitle = document.getElementById('hud-stage-title');
-  const hudStageDesc = document.getElementById('hud-stage-desc');
-  const hudTimer = document.getElementById('hud-timer');
-  const hudProgressFill = document.getElementById('hud-progress-fill');
+  const livePipelineHud  = document.getElementById('live-pipeline-hud');
+  const hudStageTitle    = document.getElementById('hud-stage-title');
+  const hudStageDesc     = document.getElementById('hud-stage-desc');
+  const hudTimer         = document.getElementById('hud-timer');
+  const hudProgressFill  = document.getElementById('hud-progress-fill');
   const hudToggleLogsBtn = document.getElementById('hud-toggle-logs-btn');
-  const hudLogsDrawer = document.getElementById('hud-logs-drawer');
-  const hudCloseLogsBtn = document.getElementById('hud-close-logs-btn');
-  const hudTerminalBody = document.getElementById('hud-terminal-body');
-  const hudCancelBtn = document.getElementById('hud-cancel-btn');
+  const hudLogsDrawer    = document.getElementById('hud-logs-drawer');
+  const hudCloseLogsBtn  = document.getElementById('hud-close-logs-btn');
+  const hudTerminalBody  = document.getElementById('hud-terminal-body');
+  const hudCancelBtn     = document.getElementById('hud-cancel-btn');
   const viewerHeaderTitle = document.getElementById('viewer-header-title');
 
   const downloadGlbBtn = document.getElementById('download-glb-btn');
   const downloadStlBtn = document.getElementById('download-stl-btn');
   const downloadObjBtn = document.getElementById('download-obj-btn');
   const downloadPlyBtn = document.getElementById('download-ply-btn');
-  const viewGlbBtn = document.getElementById('view-glb-btn');
-  const viewPlyBtn = document.getElementById('view-ply-btn');
+  const viewGlbBtn     = document.getElementById('view-glb-btn');
+  const viewPlyBtn     = document.getElementById('view-ply-btn');
   const measureToolBtn = document.getElementById('measure-tool-btn');
-  const snapshotBtn = document.getElementById('snapshot-btn');
-  const newReconBtn = document.getElementById('new-recon-btn');
-  const btnResetCam = document.getElementById('btn-reset-cam');
-  const btnAutoRotate = document.getElementById('btn-auto-rotate');
-  const btnToggleGrid = document.getElementById('btn-toggle-grid');
-  const btnPointStyle = document.getElementById('btn-point-style');
+  const snapshotBtn    = document.getElementById('snapshot-btn');
+  const newReconBtn    = document.getElementById('new-recon-btn');
+  const btnResetCam    = document.getElementById('btn-reset-cam');
+  const btnAutoRotate  = document.getElementById('btn-auto-rotate');
+  const btnToggleGrid  = document.getElementById('btn-toggle-grid');
+  const btnPointStyle  = document.getElementById('btn-point-style');
   const pointStyleLabel = document.getElementById('point-style-label');
-  const btnToggleMesh = document.getElementById('btn-toggle-mesh');
+  const btnToggleMesh  = document.getElementById('btn-toggle-mesh');
   const meshStyleLabel = document.getElementById('mesh-style-label');
-  const btnToggleBg = document.getElementById('btn-toggle-bg');
-  const btnToggleCams = document.getElementById('btn-toggle-cams');
-  const btnFullscreen = document.getElementById('btn-fullscreen');
+  const btnToggleBg    = document.getElementById('btn-toggle-bg');
+  const btnToggleCams  = document.getElementById('btn-toggle-cams');
+  const btnFullscreen  = document.getElementById('btn-fullscreen');
+  // point-size-slider does not exist in base HTML — accessed via ctrl-point-size instead
   const pointSizeSlider = document.getElementById('point-size-slider');
-  const pointSizeVal = document.getElementById('point-size-val');
+  const pointSizeVal    = document.getElementById('point-size-val');
 
   state.viewer = new ModelViewer('three-canvas-container');
 
@@ -134,13 +135,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   checkSystemHealth();
 
+  // ── Tab switching ────────────────────────────────────────────────────────
+  // IMPORTANT: Do NOT rewrite dropzoneTitle.innerHTML on tab switch — that destroys
+  // the #browse-btn DOM node the click listener is already attached to.
+  // Instead just update fileInput.accept and the subtitle text.
   if (tabDroneVideo && tabPhotos) {
     tabDroneVideo.addEventListener('click', () => {
       tabDroneVideo.classList.add('active');
       tabPhotos.classList.remove('active');
       state.activeMode = 'video';
-      fileInput.accept = '.mp4,.mov,.m4v,.ts,video/*';
-      if (dropzoneTitle) dropzoneTitle.innerHTML = 'Drop Drone Flight Video here, or <button type="button" id="browse-btn" class="text-link">browse video</button>';
+      if (fileInput) fileInput.accept = '.mp4,.mov,.m4v,.ts,video/*';
+      const browseLink = dropzoneTitle && dropzoneTitle.querySelector('.text-link');
+      if (browseLink) browseLink.textContent = 'browse video';
       if (dropzoneSubtitle) dropzoneSubtitle.textContent = 'AI automatically filters motion blur and extracts sharp parallax keyframes for single-pass 3D reconstruction.';
     });
 
@@ -148,21 +154,40 @@ document.addEventListener('DOMContentLoaded', () => {
       tabPhotos.classList.add('active');
       tabDroneVideo.classList.remove('active');
       state.activeMode = 'photos';
-      fileInput.accept = '.jpg,.jpeg,.png,.webp,image/*';
-      if (dropzoneTitle) dropzoneTitle.innerHTML = 'Drop Multi-Angle Aerial Photos here, or <button type="button" id="browse-btn" class="text-link">browse images</button>';
+      if (fileInput) fileInput.accept = '.jpg,.jpeg,.png,.webp,image/*';
+      const browseLink = dropzoneTitle && dropzoneTitle.querySelector('.text-link');
+      if (browseLink) browseLink.textContent = 'browse images';
       if (dropzoneSubtitle) dropzoneSubtitle.textContent = 'Supports JPG, PNG, and WEBP formats • Recommended: 15–40 images per flight pass';
     });
   }
 
-  browseBtn.addEventListener('click', () => fileInput.click());
-  dropzone.addEventListener('click', (e) => {
-    if (e.target !== browseBtn) fileInput.click();
-  });
+  // ── Browse button & dropzone click ───────────────────────────────────────
+  // Use event delegation on the dropzoneTitle so the .text-link button always works
+  // even if the DOM is ever updated.
+  if (dropzoneTitle) {
+    dropzoneTitle.addEventListener('click', (e) => {
+      if (e.target.classList.contains('text-link') || e.target.closest('.text-link')) {
+        e.stopPropagation();
+        if (fileInput) fileInput.click();
+      }
+    });
+  }
 
-  fileInput.addEventListener('change', (e) => {
-    handleFilesAdded(Array.from(e.target.files));
-    fileInput.value = '';
-  });
+  // Clicking anywhere on the dropzone (outside the title's text-link) also opens picker
+  if (dropzone) {
+    dropzone.addEventListener('click', (e) => {
+      // Don't trigger if the click was on a button or .text-link inside the dropzone
+      if (e.target.tagName === 'BUTTON' || e.target.closest('button')) return;
+      if (fileInput) fileInput.click();
+    });
+  }
+
+  if (fileInput) {
+    fileInput.addEventListener('change', (e) => {
+      handleFilesAdded(Array.from(e.target.files));
+      fileInput.value = '';
+    });
+  }
 
   ['dragenter', 'dragover'].forEach(eventName => {
     dropzone.addEventListener(eventName, (e) => {
@@ -653,9 +678,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  btnResetCam.addEventListener('click', () => state.viewer.resetCamera());
+  if (btnResetCam) btnResetCam.addEventListener('click', () => { if (state.viewer) state.viewer.resetCamera(); });
 
-  btnAutoRotate.addEventListener('click', () => {
+  if (btnAutoRotate) btnAutoRotate.addEventListener('click', () => {
+    if (!state.viewer) return;
     const isRotating = state.viewer.toggleAutoRotate();
     btnAutoRotate.classList.toggle('active', isRotating);
   });
@@ -713,11 +739,14 @@ document.addEventListener('DOMContentLoaded', () => {
     snapshotBtn.addEventListener('click', () => state.viewer.captureScreenshot());
   }
 
-  pointSizeSlider.addEventListener('input', (e) => {
-    const val = parseFloat(e.target.value).toFixed(1);
-    if (pointSizeVal) pointSizeVal.textContent = `${val}x`;
-    state.viewer.updatePointSize(val);
-  });
+  // pointSizeSlider may not exist in the HTML (controls are in ctrl-point-size instead)
+  if (pointSizeSlider) {
+    pointSizeSlider.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value).toFixed(1);
+      if (pointSizeVal) pointSizeVal.textContent = `${val}x`;
+      if (state.viewer) state.viewer.updatePointSize(val);
+    });
+  }
 
   if (viewGlbBtn && viewPlyBtn) {
     viewGlbBtn.addEventListener('click', async () => {
@@ -788,12 +817,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  newReconBtn.addEventListener('click', () => {
-    state.files = [];
-    state.currentJobId = null;
-    updateGalleryUI();
-    showView('upload-section');
-  });
+  if (newReconBtn) {
+    newReconBtn.addEventListener('click', () => {
+      state.files = [];
+      state.currentJobId = null;
+      updateGalleryUI();
+      showView('upload-section');
+    });
+  }
 
   /* ── Scene Controls Panel ──────────────────────────────────── */
   const sceneCtrlToggle  = document.getElementById('scene-controls-toggle');
