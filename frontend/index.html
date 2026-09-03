@@ -10,20 +10,20 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="icon" type="image/png" href="assets/aerovox-logo.png">
   <link rel="stylesheet" href="css/style.css">
-  <!-- Three.js and loaders -->
+
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/PLYLoader.js"></script>
 </head>
 <body data-theme="dark">
-  <!-- Ambient Atmospheric Lights -->
+
   <div class="ambient-glow glow-top-left"></div>
   <div class="ambient-glow glow-top-right"></div>
   <div class="ambient-glow glow-bottom-center"></div>
 
   <div class="app-layout">
-    <!-- Top Cockpit Header -->
+
     <header class="app-header">
       <div class="header-left">
         <a href="#" class="brand-link" id="brand-home-link">
@@ -67,7 +67,7 @@
       </div>
 
       <div class="header-right">
-        <!-- Theme Toggle Switch -->
+
         <button type="button" id="theme-toggle-btn" class="theme-toggle-btn" title="Toggle Theme">
           <svg class="theme-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="5"></circle>
@@ -93,14 +93,12 @@
       </div>
     </header>
 
-    <!-- Main Content Area -->
     <main class="main-content">
-      
-      <!-- STEP 0: Landing Hub & 3D Model Showcase Section -->
+
       <section id="home-section" class="view-panel active">
-        <!-- Hero Split Layout -->
+
         <div class="landing-hero hero-split">
-          <!-- Left Column: Branding & CTA -->
+
           <div class="hero-left">
             <div class="hero-badge">
               <span class="live-dot-beacon"></span>
@@ -113,7 +111,6 @@
               Ingest single-pass UAV flight footage to synthesize dense point clouds, photorealistic PBR meshes, and georeferenced spatial twins with millimeter fidelity.
             </p>
 
-            <!-- Primary Call to Actions -->
             <div class="landing-cta-group">
               <button type="button" id="hero-btn-explore" class="btn btn-primary btn-xl pulse-glow">
                 <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -134,7 +131,6 @@
               </button>
             </div>
 
-            <!-- Compact Telemetry -->
             <div class="telemetry-bar landing-telemetry">
               <div class="telemetry-item">
                 <span class="telemetry-label">Metric Precision</span>
@@ -155,10 +151,9 @@
             </div>
           </div>
 
-          <!-- Right Column: Scattered Photo Frame Collage (Matching User Sketch) -->
           <div class="hero-right">
             <div class="photo-collage-container">
-              <!-- Frame 1: Bottom Left (Portrait) -->
+
               <div class="photo-frame frame-1" data-label="Topology Scan">
                 <div class="frame-inner">
                   <img src="assets/showcase-mesh-head.png" alt="3D Neural Mesh Topology" loading="eager">
@@ -166,7 +161,6 @@
                 </div>
               </div>
 
-              <!-- Frame 2: Top Center-Left (Square / Hero Overlap) -->
               <div class="photo-frame frame-2" data-label="Precision Mesh">
                 <div class="frame-inner">
                   <img src="assets/showcase-mesh-car.png" alt="3D Surface Reconstruction" loading="eager">
@@ -174,7 +168,6 @@
                 </div>
               </div>
 
-              <!-- Frame 3: Center-Right (Landscape / Overlapping) -->
               <div class="photo-frame frame-3" data-label="Aerial Photogrammetry">
                 <div class="frame-inner">
                   <img src="assets/showcase-terrain-1.png" alt="Aerial Terrain Photogrammetry" loading="eager">
@@ -182,7 +175,6 @@
                 </div>
               </div>
 
-              <!-- Frame 4: Top Right (Elevated) -->
               <div class="photo-frame frame-4" data-label="Spatial Digital Twin">
                 <div class="frame-inner">
                   <img src="assets/showcase-terrain-2.png" alt="Geospatial Mountain Twin" loading="eager">
@@ -193,7 +185,6 @@
           </div>
         </div>
 
-        <!-- Section 1: Interactive 3D Demo Showcase Gallery -->
         <div class="showcase-section">
           <div class="section-header">
             <div class="section-badge">INTERACTIVE DEMOS</div>
@@ -202,7 +193,7 @@
           </div>
 
           <div class="showcase-grid">
-            <!-- Card 1 (Featured) -->
+
             <div class="showcase-card featured" data-model="/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb" data-title="Tactical UAV Survey Alpha" data-badge="UAV Flight Stream • 16 Keyframes">
               <div class="card-thumb-wrap">
                 <img src="/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/images/drone_frame_001.jpg" alt="Tactical UAV Survey Alpha" class="showcase-img" loading="lazy">
@@ -238,7 +229,6 @@
               </div>
             </div>
 
-            <!-- Card 2 -->
             <div class="showcase-card" data-model="/storage/jobs/1871f0ea-0247-4629-9670-d794e8b28980/outputs/scene.glb" data-title="Infrastructure & Facade Mapping" data-badge="Building Facade • Metric Scale">
               <div class="card-thumb-wrap">
                 <img src="/storage/jobs/1871f0ea-0247-4629-9670-d794e8b28980/images/Screenshot_2026-08-31_at_10.40.41_AM.png" alt="Infrastructure Mapping" class="showcase-img" loading="lazy">
@@ -274,7 +264,6 @@
               </div>
             </div>
 
-            <!-- Card 3 -->
             <div class="showcase-card" data-model="/storage/jobs/897771e6-d3e4-41f8-a064-798a974e470c/outputs/scene.glb" data-title="Aerial Terrain & Topography" data-badge="Terrain Elevation • Gaussian Splats">
               <div class="card-thumb-wrap">
                 <img src="/storage/jobs/897771e6-d3e4-41f8-a064-798a974e470c/images/drone_frame_001.jpg" alt="Aerial Terrain" class="showcase-img" loading="lazy">
@@ -312,7 +301,6 @@
           </div>
         </div>
 
-        <!-- Section 2: Core Capabilities Grid -->
         <div class="capabilities-section">
           <div class="section-header">
             <div class="section-badge">TACTICAL SUITE</div>
@@ -364,7 +352,6 @@
           </div>
         </div>
 
-        <!-- Section 6: Potential Applications Matrix -->
         <div class="applications-section">
           <div class="section-header">
             <div class="section-badge">OPERATIONAL DOMAINS</div>
@@ -416,7 +403,6 @@
           </div>
         </div>
 
-        <!-- Section 7: 3-Step Workflow -->
         <div class="workflow-section">
           <div class="section-header">
             <div class="section-badge">PIPELINE</div>
@@ -444,7 +430,6 @@
           </div>
         </div>
 
-        <!-- Bottom Action Strip -->
         <div class="landing-bottom-cta">
           <div class="bottom-cta-content">
             <h3 class="bottom-cta-title">Ready to build your first 3D spatial twin?</h3>
@@ -464,7 +449,6 @@
         </div>
       </section>
 
-      <!-- STEP 1: Mission Setup & Upload Section -->
       <section id="upload-section" class="view-panel">
         <div class="section-nav-bar">
           <button type="button" id="back-to-home-btn" class="btn-back-link">
@@ -475,8 +459,7 @@
             <span>Back to Overview</span>
           </button>
         </div>
-        
-        <!-- Compact Hero Header -->
+
         <div class="hero-cockpit">
           <div class="hero-badge">
             <svg class="sparkle-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -492,7 +475,6 @@
           </p>
         </div>
 
-        <!-- Mission Input Mode Selector -->
         <div class="mission-mode-bar">
           <button type="button" class="mode-tab active" id="tab-drone-video">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -511,7 +493,6 @@
           </button>
         </div>
 
-        <!-- Sleek Dropzone Area -->
         <div id="dropzone" class="dropzone-area">
           <input type="file" id="file-input" multiple accept=".mp4,.mov,.m4v,.ts,.jpg,.jpeg,.png,.webp,image/*,video/*" class="file-input-hidden">
           <div class="dropzone-content">
@@ -529,7 +510,6 @@
           </div>
         </div>
 
-        <!-- Video Processing Indicator / Extraction Bar -->
         <div id="video-extract-bar" class="video-extract-bar hidden">
           <div class="extract-header">
             <div class="extract-title">
@@ -543,7 +523,6 @@
           </div>
         </div>
 
-        <!-- Gallery / Keyframes Preview Grid -->
         <div id="gallery-container" class="gallery-container hidden">
           <div class="gallery-toolbar">
             <div class="gallery-count-badge">
@@ -554,11 +533,10 @@
           </div>
 
           <div id="image-grid" class="image-grid">
-            <!-- Dynamically populated thumbnails -->
+
           </div>
         </div>
 
-        <!-- Telemetry & Metric Metadata Bar (Optional) -->
         <div class="telemetry-bar">
           <div class="telemetry-item">
             <span class="telemetry-label">Flight Trajectory</span>
@@ -578,7 +556,6 @@
           </div>
         </div>
 
-        <!-- Optimization Presets -->
         <div class="presets-container">
           <span class="presets-label">Mission Profile:</span>
           <div class="presets-group">
@@ -594,7 +571,6 @@
           </div>
         </div>
 
-        <!-- Advanced Configuration Collapsible -->
         <div class="settings-card">
           <button type="button" id="settings-toggle" class="settings-toggle-btn" aria-expanded="false">
             <div class="toggle-title">
@@ -645,7 +621,6 @@
           </div>
         </div>
 
-        <!-- AI Subject Isolation & Background Remover -->
         <div class="ai-filter-card">
           <div class="filter-left">
             <div class="filter-icon-box">🪄</div>
@@ -663,7 +638,6 @@
           </label>
         </div>
 
-        <!-- Launch Button Footer -->
         <div class="action-footer">
           <button type="button" id="generate-btn" class="btn btn-primary btn-lg" disabled>
             <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -674,19 +648,16 @@
         </div>
       </section>
 
-      <!-- STEP 2: 3D Geospatial Viewer & Live Neural Analysis Studio -->
       <section id="viewer-section" class="view-panel">
         <div class="viewer-container">
-          <!-- Tactical Viewport Corner Brackets -->
+
           <div class="hud-bracket bracket-tl"></div>
           <div class="hud-bracket bracket-tr"></div>
           <div class="hud-bracket bracket-bl"></div>
           <div class="hud-bracket bracket-br"></div>
-          
-          <!-- Viewport Vignette Depth Mask -->
+
           <div class="viewport-vignette"></div>
 
-          <!-- 3D Canvas Viewport -->
           <div id="three-canvas-container" class="canvas-container">
             <div id="viewer-loading-overlay" class="viewer-overlay hidden">
               <div class="loading-spinner"></div>
@@ -694,7 +665,6 @@
             </div>
           </div>
 
-          <!-- Top Viewer Header HUD Bar -->
           <div class="viewer-top-bar">
             <div class="viewer-meta-info">
               <div class="meta-title-row">
@@ -705,13 +675,12 @@
             </div>
 
             <div class="viewer-actions">
-              <!-- Format & Precision Tier Selectors -->
+
               <div class="format-toggle-group" id="format-toggle-group">
                 <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">GLB</button>
                 <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">PLY</button>
               </div>
 
-              <!-- Denoise & Precision Selector -->
               <div class="precision-select-group" id="precision-select-group">
                 <select id="precision-filter-select" class="precision-select" title="Precision & Denoising Filter Level">
                   <option value="scene.glb" selected>✨ Pristine (Clean)</option>
@@ -722,7 +691,6 @@
                 </select>
               </div>
 
-              <!-- Quick Model Explorer Switcher -->
               <div class="model-select-group" id="demo-model-select-group">
                 <select id="demo-model-select" class="precision-select" title="Switch 3D Scene / Mission">
                   <option value="/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb" selected>🚁 Tactical UAV Alpha</option>
@@ -731,7 +699,6 @@
                 </select>
               </div>
 
-              <!-- 3D Measurement Ruler Tool Toggle -->
               <button type="button" id="measure-tool-btn" class="btn btn-hud-action btn-sm" title="Measure Distance & Elevation in 3D">
                 <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M2 12h20M2 12l5-5M2 12l5 5M22 12l-5-5M22 12l-5 5"></path>
@@ -776,7 +743,6 @@
             </div>
           </div>
 
-          <!-- Measurement HUD Readout (Active when measuring) -->
           <div id="measure-readout-hud" class="measure-readout-hud hidden">
             <div class="measure-badge">
               <span class="measure-dot"></span>
@@ -785,7 +751,6 @@
             <span class="measure-sub" id="measure-hint-text">Click 2 points on terrain or structure to measure</span>
           </div>
 
-          <!-- Live Analysis HUD Overlay (Active during reconstruction) -->
           <div id="live-pipeline-hud" class="live-pipeline-hud hidden">
             <div class="hud-card">
               <div class="hud-header">
@@ -796,13 +761,11 @@
                 <span id="hud-timer" class="hud-timer">00:00</span>
               </div>
               <p id="hud-stage-desc" class="hud-desc">Analyzing 3D camera angles & feature matches in real-time...</p>
-              
-              <!-- Mini Progress Bar -->
+
               <div class="hud-progress-bar-bg">
                 <div id="hud-progress-fill" class="hud-progress-fill" style="width: 10%;"></div>
               </div>
 
-              <!-- HUD Footer -->
               <div class="hud-footer">
                 <button type="button" id="hud-toggle-logs-btn" class="btn btn-hud-action btn-sm">
                   <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -815,7 +778,6 @@
               </div>
             </div>
 
-            <!-- Floating Live Console Drawer -->
             <div id="hud-logs-drawer" class="hud-logs-drawer hidden">
               <div class="drawer-header">
                 <span>Inference Output Stream</span>
@@ -827,7 +789,6 @@
             </div>
           </div>
 
-          <!-- Bottom Viewer Controls Floating Dock -->
           <div class="viewer-dock">
             <button type="button" id="btn-reset-cam" class="dock-btn" title="Reset Camera View">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -906,7 +867,6 @@
             </div>
           </div>
 
-          <!-- Quick Navigation Hints -->
           <div class="viewer-hints">
             <span class="hint-item"><span class="hint-kbd">L-Click</span> Orbit</span>
             <span class="hint-sep">/</span>

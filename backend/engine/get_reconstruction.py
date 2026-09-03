@@ -1,14 +1,4 @@
 #!/usr/bin/env python3
-# Copyright (C) 2025-present Naver Corporation. All rights reserved.
-#
-# --------------------------------------------------------
-# MUSt3R High-Precision 3D Reconstruction & Clean Exporter
-# Features:
-#   - 2D Depth Gradient Discontinuity Filter (Eliminates flying edge slices)
-#   - Alpha Mask / Subject Isolation Intersect (Purges background artifacts)
-#   - Statistical Outlier Removal (SOR, purges isolated floating noise dots)
-#   - Multi-Tier Precision Export (Clean 3.0, Ultra 4.0, Balanced 2.5, Dense 2.0)
-# --------------------------------------------------------
 import os
 import sys
 import argparse
@@ -25,8 +15,7 @@ from PIL import Image
 import matplotlib
 matplotlib.use('Agg')
 
-torch.backends.cuda.matmul.allow_tf32 = True  # for gpu >= Ampere and pytorch >= 1.12
-
+torch.backends.cuda.matmul.allow_tf32 = True
 
 def get_args_parser():
     parser = argparse.ArgumentParser(description="MUSt3R High-Precision 3D Scene Reconstruction Executable")
@@ -58,7 +47,6 @@ def get_args_parser():
     parser.add_argument("--flying_edges_thr", type=float, default=0.06, help="Depth discontinuity step threshold")
     return parser
 
-
 def apply_fast_sor(pts, colors=None, k=16, std_ratio=1.15):
     """
     Applies Statistical Outlier Removal (SOR) to purge stray noise dots and detached floaters.
@@ -69,7 +57,7 @@ def apply_fast_sor(pts, colors=None, k=16, std_ratio=1.15):
     try:
         tree = cKDTree(pts)
         dists, _ = tree.query(pts, k=min(k, len(pts)), workers=-1)
-        mean_dists = np.mean(dists[:, 1:], axis=1)  # Exclude self at index 0
+        mean_dists = np.mean(dists[:, 1:], axis=1)
         mu = np.mean(mean_dists)
         sigma = np.std(mean_dists)
         valid = mean_dists <= (mu + std_ratio * sigma)
@@ -80,7 +68,6 @@ def apply_fast_sor(pts, colors=None, k=16, std_ratio=1.15):
     except Exception as e:
         print(f"[Notice] SOR filter bypass: {e}")
         return pts, colors
-
 
 def filter_flying_edges(pts3d_np, conf_np, step_thr=0.06):
     """
@@ -94,7 +81,6 @@ def filter_flying_edges(pts3d_np, conf_np, step_thr=0.06):
     edge_x = np.zeros((H, W), dtype=bool)
     edge_y = np.zeros((H, W), dtype=bool)
     
-    # Relative depth-scaled threshold
     depth = np.abs(pts3d_np[:, :, 2])
     thr_map_x = np.maximum(depth[:, :-1] * step_thr, 0.02)
     thr_map_y = np.maximum(depth[:-1, :] * step_thr, 0.02)
@@ -103,7 +89,6 @@ def filter_flying_edges(pts3d_np, conf_np, step_thr=0.06):
     edge_y[:-1, :] = diff_y > thr_map_y
     
     return edge_x | edge_y
-
 
 def to_numpy(x):
     """Safely converts tensors, lists, and dicts to numpy arrays."""
@@ -116,7 +101,6 @@ def to_numpy(x):
     elif isinstance(x, np.ndarray):
         return x
     return np.array(x)
-
 
 def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb",
                            flying_edges_thr=0.06, cam_size=0.05, verbose=True):
@@ -143,21 +127,18 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
         conf = conf_list[i]
         img = imgs_np[i]
 
-        # 1. Base Confidence Mask
         mask = conf >= min_conf_thr
 
-        # 2. Check for alpha channel in original image or transparent/dark background
         if img.shape[-1] == 4:
             alpha_mask = img[:, :, 3] > 0.3
             mask = mask & alpha_mask
 
-        # 3. Flying Edges / Slicing Plane Discontinuity Filter
         if flying_edges_thr > 0.0:
             edge_mask = filter_flying_edges(pts, conf, step_thr=flying_edges_thr)
             mask = mask & (~edge_mask)
 
         valid_pts = pts[mask]
-        valid_cols = img[mask][:, :3]  # Keep RGB
+        valid_cols = img[mask][:, :3]
 
         if len(valid_pts) > 0:
             all_pts.append(valid_pts)
@@ -170,15 +151,12 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
     cat_pts = np.concatenate(all_pts, axis=0)
     cat_cols = np.concatenate(all_cols, axis=0)
 
-    # 4. Statistical Outlier Removal (SOR) to purge stray noise dots
     clean_pts, clean_cols = apply_fast_sor(cat_pts, cat_cols, k=16, std_ratio=1.15)
 
-    # Build Trimesh scene
     scene_3d = trimesh.Scene()
     pct = trimesh.PointCloud(clean_pts.reshape(-1, 3), colors=clean_cols.reshape(-1, 3))
     scene_3d.add_geometry(pct)
 
-    # Add camera frustums
     for i, pose_c2w in enumerate(cams2world_np):
         try:
             camera_edge_color = CAM_COLORS[i % len(CAM_COLORS)]
@@ -195,7 +173,6 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
         except Exception as cam_err:
             pass
 
-    # Orientation alignment
     rot = np.eye(4)
     rot[:3, :3] = Rotation.from_euler('y', np.deg2rad(180)).as_matrix()
     scene_3d.apply_transform(np.linalg.inv(cams2world_np[0] @ OPENGL @ rot))
@@ -211,12 +188,10 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
 
     return outfile
 
-
 def main():
     parser = get_args_parser()
     args = parser.parse_args()
 
-    # Dynamic sys.path injection for must3r, dust3r, and croco
     candidate_roots = [
         os.environ.get("MUST3R_ROOT"),
         os.path.expanduser("~/must3r"),
@@ -234,7 +209,6 @@ def main():
             if os.path.isdir(croco_path) and croco_path not in sys.path:
                 sys.path.insert(0, croco_path)
 
-    # Import must3r modules dynamically
     try:
         from must3r.model import load_model
         from must3r.model.blocks.attention import toggle_memory_efficient_attention, has_xformers
@@ -260,7 +234,6 @@ def main():
 
     os.makedirs(args.output, exist_ok=True)
 
-    # Device fallback check
     device = args.device
     if device == "mps" and not torch.backends.mps.is_available():
         print("[Device Notice] MPS not available on this system, falling back to CPU")
@@ -283,14 +256,12 @@ def main():
     cam_size = args.cam_size
     execution_mode = args.execution_mode
 
-    # If retrieval mode requested but retrieval weights missing, fallback to linseq
     if execution_mode == "retrieval" and (not args.retrieval or not os.path.isfile(args.retrieval)):
         print("[Notice] Retrieval weights not found. Falling back to sequential mode (linseq).")
         execution_mode = "linseq"
 
     print(f"[MUSt3R Engine] Reconstructing {len(images)} views (mode: {execution_mode}, size: {args.image_size}px, bs: {args.max_bs})...")
 
-    # Reconstruct scene with initial broad threshold to retain full geometry
     scene, _ = get_reconstructed_scene(
         outdir=args.output,
         viser_server=None,
@@ -322,7 +293,6 @@ def main():
         overlap_percentile=args.overlap_percentile
     )
 
-    # 1. Export Clean Primary scene.glb and scene.ply with gradient discontinuity + SOR filtering
     target_clean_conf = max(2.5, args.min_conf_thr)
     print(f"[Clean Exporter] Generating pristine primary model (Confidence: {target_clean_conf}, SOR: ON, Edge Filter: ON)...")
     
@@ -336,7 +306,6 @@ def main():
         verbose=True
     )
     
-    # Also export primary scene.ply
     export_clean_scene_glb(
         args.output,
         scene,
@@ -347,7 +316,6 @@ def main():
         verbose=True
     )
 
-    # 2. Export Multi-Tier Precision Levels for user selection in viewer
     precision_tiers = [
         (4.5, "scene_ultra.glb"),
         (3.5, "scene_clean.glb"),
@@ -380,7 +348,6 @@ def main():
         print(f"SUCCESS: High-precision clean 3D scene saved to {primary_glb}")
         sys.exit(0)
     else:
-        # Fallback to 2.0 if points were very sparse
         fallback_glb = export_clean_scene_glb(
             args.output,
             scene,
@@ -395,7 +362,6 @@ def main():
             sys.exit(0)
         print("[Error] Could not export 3D model from scene.", file=sys.stderr)
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

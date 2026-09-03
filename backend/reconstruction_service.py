@@ -19,7 +19,6 @@ from PIL import Image
 logger = logging.getLogger("reconstruction_service")
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 
-
 class JobStatus(str, Enum):
     QUEUED = "queued"
     PREPROCESSING = "preprocessing"
@@ -28,7 +27,6 @@ class JobStatus(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
     CANCELLED = "cancelled"
-
 
 @dataclass
 class JobConfig:
@@ -41,7 +39,6 @@ class JobConfig:
     render_once: bool = False
     num_mem_imgs: int = 50
     remove_background: bool = True
-
 
 @dataclass
 class JobInfo:
@@ -59,7 +56,6 @@ class JobInfo:
     output_files: Dict[str, str] = field(default_factory=dict)
     error: Optional[str] = None
 
-
 class BasePreprocessingHook:
     """
     Interface for modular pre-processing hooks.
@@ -73,14 +69,12 @@ class BasePreprocessingHook:
         """
         return image_dir
 
-
 class ReconstructionService:
     def __init__(self, base_storage_dir: Optional[str] = None):
         self.base_dir = Path(__file__).resolve().parent.parent
         self.storage_dir = Path(base_storage_dir or os.getenv("STORAGE_DIR", self.base_dir / "storage" / "jobs"))
         self.storage_dir.mkdir(parents=True, exist_ok=True)
 
-        # Dynamic MUSt3R auto-discovery across candidate paths
         candidate_roots = []
         if os.getenv("MUST3R_ROOT"):
             candidate_roots.append(Path(os.path.expanduser(os.getenv("MUST3R_ROOT"))))
@@ -92,7 +86,6 @@ class ReconstructionService:
             Path("/opt/must3r")
         ])
 
-        # Pick first existing must3r root or fallback to ~/must3r
         self.must3r_root = candidate_roots[0]
         for candidate in candidate_roots:
             if (candidate / "get_reconstruction.py").is_file():
@@ -101,7 +94,6 @@ class ReconstructionService:
             elif candidate.is_dir():
                 self.must3r_root = candidate.resolve()
 
-        # Dynamic Python binary discovery (prioritizes active virtualenv / sys.executable)
         candidate_pythons = [
             self.must3r_root / ".venv" / "bin" / "python",
             self.base_dir / ".venv" / "bin" / "python",
@@ -114,32 +106,27 @@ class ReconstructionService:
         self.python_bin = Path(sys.executable)
         for py in candidate_pythons:
             if py.is_file() and os.access(py, os.X_OK):
-                # Preserve virtualenv binary path without resolving symlink to base python
                 self.python_bin = py
                 break
 
-        # Bundled engine script inside Render repository
         bundled_script = self.base_dir / "backend" / "engine" / "get_reconstruction.py"
         if bundled_script.is_file():
             self.script_path = bundled_script.resolve()
         else:
             self.script_path = self.must3r_root / "get_reconstruction.py"
         
-        # Model weights discovery
         models_dir = self.must3r_root / "models"
         self.weights_512 = Path(os.path.expanduser(os.getenv("MUST3R_WEIGHTS", str(models_dir / "MUSt3R_512.pth")))).resolve()
         self.retrieval_512 = Path(os.path.expanduser(os.getenv("MUST3R_RETRIEVAL", str(models_dir / "MUSt3R_512_retrieval_trainingfree.pth")))).resolve()
         self.weights_224 = models_dir / "MUSt3R_224_cvpr.pth"
         self.retrieval_224 = models_dir / "MUSt3R_224_retrieval_trainingfree.pth"
 
-        # Jobs state management
         self.jobs: Dict[str, JobInfo] = {}
         self.active_processes: Dict[str, subprocess.Popen] = {}
         self._lock = threading.Lock()
         self._queue: asyncio.Queue = asyncio.Queue()
         self._worker_task: Optional[asyncio.Task] = None
 
-        # Preprocessing hooks (modular for future YOLO / SAM 2)
         self.preprocessing_hooks: List[BasePreprocessingHook] = []
 
     def register_preprocessing_hook(self, hook: BasePreprocessingHook):
@@ -153,7 +140,6 @@ class ReconstructionService:
         has_weights_512 = self.weights_512.is_file()
         has_retrieval_512 = self.retrieval_512.is_file()
 
-        # Check MPS / PyTorch device via Python binary
         mps_available = False
         cuda_available = False
         device_name = "CPU"
@@ -231,9 +217,7 @@ class ReconstructionService:
         if not job_dir.is_dir():
             raise ValueError(f"Job {job_id} not found or invalid directory.")
 
-        # Strip any directory path components to prevent path traversal
         clean_name = Path(filename).name
-        # Keep alphanumeric, dots, dashes, underscores
         clean_name = re.sub(r"[^\w\-.]", "_", clean_name)
         if not clean_name:
             clean_name = f"image_{uuid.uuid4().hex[:8]}.jpg"
@@ -244,16 +228,13 @@ class ReconstructionService:
 
         target_path = job_dir / clean_name
 
-        # Write, normalize EXIF orientation, and optimize size for fast neural processing
         try:
             import io
             from PIL import ImageOps
             with Image.open(io.BytesIO(content)) as img:
-                # Correct EXIF rotation (crucial for iPhone / camera photos)
                 img = ImageOps.exif_transpose(img)
                 img = img.convert("RGB")
                 
-                # Rescale high-megapixel photos (e.g. 48MP) to optimal 1600px max edge
                 max_edge = 1600
                 if max(img.size) > max_edge:
                     img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
@@ -263,7 +244,6 @@ class ReconstructionService:
             target_path.unlink(missing_ok=True)
             raise ValueError(f"Uploaded file {clean_name} is corrupted or invalid: {e}")
 
-        # Update image count
         with self._lock:
             if job_id in self.jobs:
                 img_files = list(job_dir.glob("*"))
@@ -337,7 +317,6 @@ class ReconstructionService:
             self._append_log(job_id, f"[AI Matting] Processing {len(image_paths)} images for foreground subject isolation...")
             self._update_progress(job_id, 8, "AI Matting", f"Isolating subjects across {len(image_paths)} images...")
 
-            # Use lightweight session
             session = None
             try:
                 session = rembg.new_session('u2netp')
@@ -356,10 +335,8 @@ class ReconstructionService:
                             res = rembg.remove(img_rgb, session=session)
                         else:
                             res = rembg.remove(img_rgb)
-                        # Save with alpha channel so background pixels are masked out in 3D
                         res.save(out_p, "PNG")
                 except Exception as ex:
-                    # Fallback to copy original image
                     shutil.copy2(p, masked_dir / f"{p.stem}{p.suffix}")
 
             with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
@@ -367,7 +344,6 @@ class ReconstructionService:
                 for f in as_completed(futures, timeout=45):
                     pass
 
-            # Verify that masked directory contains valid files
             valid_masked = [f for f in masked_dir.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp") and f.stat().st_size > 1000]
             if len(valid_masked) >= 2:
                 self._append_log(job_id, f"[AI Matting] Successfully isolated subjects ({len(valid_masked)} frames ready for 3D reconstruction).")
@@ -398,7 +374,6 @@ class ReconstructionService:
 
         self._append_log(job_id, f"Starting reconstruction job {job_id}")
 
-        # Run preprocessing hooks if any
         processed_img_dir = img_dir
         for hook in self.preprocessing_hooks:
             try:
@@ -406,11 +381,9 @@ class ReconstructionService:
             except Exception as e:
                 self._append_log(job_id, f"Preprocessing hook warning: {e}")
 
-        # AI Background & Clutter Removal (Foreground Subject Isolation)
         if job.config.get("remove_background", True):
             processed_img_dir = self._apply_ai_background_removal(job_id, processed_img_dir)
 
-        # Check image files
         valid_extensions = (".jpg", ".jpeg", ".png", ".webp")
         images = [f for f in processed_img_dir.iterdir() if f.is_file() and f.suffix.lower() in valid_extensions]
         if not images:
@@ -425,16 +398,13 @@ class ReconstructionService:
         cfg = job.config
         img_size = int(cfg.get("image_size", 512))
         device = str(cfg.get("device", "mps"))
-        # Optimized batch size for Apple Silicon unified memory
         default_bs = 2 if device in ["mps", "cuda"] and len(images) > 3 else 1
         max_bs = int(cfg.get("max_bs", default_bs))
         num_refinements = int(cfg.get("num_refinements_iterations", 6))
         exec_mode = str(cfg.get("execution_mode", "retrieval"))
         cam_size = float(cfg.get("cam_size", 0.05))
-        # Optimized memory image window for fast cross-attention without losing geometric constraint
         num_mem_imgs = min(int(cfg.get("num_mem_imgs", 24)), len(images))
 
-        # Pre-flight check for MUSt3R repository and script
         if not self.must3r_root.is_dir() or not self.script_path.is_file():
             err_msg = (
                 f"MUSt3R engine not found at: {self.must3r_root}\n"
@@ -449,7 +419,6 @@ class ReconstructionService:
             self._append_log(job_id, f"[ERROR] {err_msg}")
             return
 
-        # Select weights
         if img_size == 224 and self.weights_224.is_file():
             weights_path = str(self.weights_224)
             retrieval_path = str(self.retrieval_224)
@@ -460,17 +429,14 @@ class ReconstructionService:
         if not Path(weights_path).is_file():
             self._append_log(job_id, f"[Notice] Model weights {weights_path} not found. Attempting reconstruction...")
 
-        # Check retrieval codebook if retrieval mode is requested
         if exec_mode == "retrieval":
             codebook_512 = self.must3r_root / "models" / "MUSt3R_512_retrieval_codebook.pkl"
             codebook_224 = self.must3r_root / "models" / "MUSt3R_224_retrieval_codebook.pkl"
             active_codebook = codebook_224 if img_size == 224 else codebook_512
-            # Codebook should be complete (~256MB)
             if not active_codebook.is_file() or active_codebook.stat().st_size < 50 * 1024 * 1024:
                 self._append_log(job_id, f"Notice: Codebook {active_codebook.name} is incomplete or pending download. Running sequence mode.")
                 exec_mode = "linseq"
 
-        # Build command strictly with list of arguments (NO shell=True)
         cmd = [
             str(self.python_bin),
             str(self.script_path),
@@ -498,14 +464,12 @@ class ReconstructionService:
         with self._lock:
             job.status = JobStatus.RECONSTRUCTING
 
-        # Environment variables for subprocess
         env = os.environ.copy()
         env["PYTHONUNBUFFERED"] = "1"
         env["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
         env["OMP_NUM_THREADS"] = "1"
         env["MKL_NUM_THREADS"] = "1"
         env["PYTORCH_MPS_HIGH_WATERMARK_RATIO"] = "0.0"
-        # Include must3r root in PYTHONPATH
         current_pythonpath = env.get("PYTHONPATH", "")
         env["PYTHONPATH"] = f"{self.must3r_root}:{self.must3r_root / 'dust3r'}:{current_pythonpath}"
 
@@ -523,7 +487,6 @@ class ReconstructionService:
             with self._lock:
                 self.active_processes[job_id] = process
 
-            # Parse live output
             progress_counter = 15
             for line in iter(process.stdout.readline, ''):
                 if not line:
@@ -534,7 +497,6 @@ class ReconstructionService:
 
                 self._append_log(job_id, line_str)
 
-                # Heuristic progress tracking from MUSt3R output
                 lower = line_str.lower()
                 if "loading model" in lower:
                     self._update_progress(job_id, 20, "Reconstructing", "Loading MUSt3R neural network weights...")
@@ -558,7 +520,6 @@ class ReconstructionService:
                     return
                 raise RuntimeError(f"MUSt3R process exited with code {return_code}")
 
-            # Exporting stage: ensure both scene.glb and scene.ply exist
             self._update_progress(job_id, 90, "Exporting", "Finalizing high-precision GLB & PLY models...")
             with self._lock:
                 job.status = JobStatus.EXPORTING
@@ -591,7 +552,6 @@ class ReconstructionService:
         main_glb = out_dir / "scene.glb"
         main_ply = out_dir / "scene.ply"
 
-        # Check for clean confidence models in preferred order: clean 3.0 -> ultra 4.5 -> balanced 2.5
         preferred_candidates = [
             out_dir / "scene_clean.glb",
             out_dir / "scene_3.0.glb",
@@ -616,7 +576,6 @@ class ReconstructionService:
             shutil.copyfile(selected_glb, main_glb)
             self._append_log(job_id, f"Primary GLB selected from {selected_glb.name} (filtered clean geometry)")
 
-        # Generate PLY if missing using trimesh from scene.glb
         if not main_ply.is_file() and main_glb.is_file():
             self._append_log(job_id, "Generating PLY point cloud / mesh export...")
             try:
@@ -627,14 +586,12 @@ class ReconstructionService:
             except Exception as e:
                 self._append_log(job_id, f"PLY export notice: {e}")
 
-        # Update output files mapping
         output_files = {}
         if main_glb.is_file():
             output_files["glb"] = f"/storage/jobs/{job_id}/outputs/scene.glb"
         if main_ply.is_file():
             output_files["ply"] = f"/storage/jobs/{job_id}/outputs/scene.ply"
 
-        # Also add all available confidence levels
         confidence_map = {}
         for c_file in sorted(out_dir.glob("scene_*.glb")):
             name = c_file.stem.replace("scene_", "")
@@ -663,7 +620,6 @@ class ReconstructionService:
             try:
                 job_id = await self._queue.get()
                 logger.info(f"Worker picked up job {job_id}")
-                # Run the CPU/GPU intensive job in a separate thread so event loop remains unblocked
                 await asyncio.to_thread(self._run_reconstruction_sync, job_id)
                 self._queue.task_done()
             except asyncio.CancelledError:

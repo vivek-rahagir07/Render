@@ -1,10 +1,7 @@
-/**
- * AEROVOX — Autonomous Drone Reconnaissance & 3D Mapping Studio
- * Client Application Logic
- */
+
 
 document.addEventListener('DOMContentLoaded', () => {
-  // Global State
+
   const state = {
     files: [],
     currentJobId: null,
@@ -12,25 +9,21 @@ document.addEventListener('DOMContentLoaded', () => {
     elapsedTimer: null,
     startTime: null,
     viewer: null,
-    activeMode: 'video' // 'video' or 'photos'
+    activeMode: 'video'
   };
 
-  // DOM Elements
   const statusPill = document.getElementById('system-status-pill');
   const statusPillText = document.getElementById('status-pill-text');
 
-  // Views
   const homeSection = document.getElementById('home-section');
   const uploadSection = document.getElementById('upload-section');
   const viewerSection = document.getElementById('viewer-section');
 
-  // Nav & Header Elements
   const navBtnHome = document.getElementById('nav-btn-home');
   const navBtnCreate = document.getElementById('nav-btn-create');
   const navBtnViewer = document.getElementById('nav-btn-viewer');
   const brandHomeLink = document.getElementById('brand-home-link');
 
-  // Landing CTAs & Showcase Elements
   const heroBtnExplore = document.getElementById('hero-btn-explore');
   const heroBtnUpload = document.getElementById('hero-btn-upload');
   const bottomBtnUpload = document.getElementById('bottom-btn-upload');
@@ -38,17 +31,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const backToHomeBtn = document.getElementById('back-to-home-btn');
   const demoModelSelect = document.getElementById('demo-model-select');
 
-  // Theme Switcher
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
   const themeToggleLabel = document.getElementById('theme-toggle-label');
 
-  // Mode Tabs
   const tabDroneVideo = document.getElementById('tab-drone-video');
   const tabPhotos = document.getElementById('tab-photos');
   const dropzoneTitle = document.getElementById('dropzone-title');
   const dropzoneSubtitle = document.getElementById('dropzone-subtitle');
 
-  // Upload Elements
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('file-input');
   const browseBtn = document.getElementById('browse-btn');
@@ -62,7 +52,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const clearAllBtn = document.getElementById('clear-all-btn');
   const generateBtn = document.getElementById('generate-btn');
 
-  // Settings Elements
   const settingsToggle = document.getElementById('settings-toggle');
   const settingsContent = document.getElementById('settings-content');
   const cfgImageSize = document.getElementById('cfg-image-size');
@@ -71,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const cfgMode = document.getElementById('cfg-mode');
   const cfgDevice = document.getElementById('cfg-device');
 
-  // Live HUD Elements (In 3D Viewport)
   const livePipelineHud = document.getElementById('live-pipeline-hud');
   const hudStageTitle = document.getElementById('hud-stage-title');
   const hudStageDesc = document.getElementById('hud-stage-desc');
@@ -84,7 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
   const hudCancelBtn = document.getElementById('hud-cancel-btn');
   const viewerHeaderTitle = document.getElementById('viewer-header-title');
 
-  // Viewer Action Elements
   const downloadGlbBtn = document.getElementById('download-glb-btn');
   const downloadPlyBtn = document.getElementById('download-ply-btn');
   const viewGlbBtn = document.getElementById('view-glb-btn');
@@ -103,10 +90,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const pointSizeSlider = document.getElementById('point-size-slider');
   const pointSizeVal = document.getElementById('point-size-val');
 
-  // Initialize Viewer
   state.viewer = new ModelViewer('three-canvas-container');
 
-  // --- Theme Switcher (Noir Gold / Ivory Gold) ---
   function applyTheme(theme) {
     document.body.setAttribute('data-theme', theme);
     localStorage.setItem('aerovox_theme', theme);
@@ -126,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Initial System Health Check ---
   async function checkSystemHealth() {
     try {
       const data = await API.checkHealth();
@@ -146,7 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   checkSystemHealth();
 
-  // --- Mission Mode Switcher ---
   if (tabDroneVideo && tabPhotos) {
     tabDroneVideo.addEventListener('click', () => {
       tabDroneVideo.classList.add('active');
@@ -167,7 +150,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- Event Listeners: Upload & Drag-Drop ---
   browseBtn.addEventListener('click', () => fileInput.click());
   dropzone.addEventListener('click', (e) => {
     if (e.target !== browseBtn) fileInput.click();
@@ -218,9 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /**
-   * Client-Side Automated Drone Video Keyframe Extractor
-   */
   async function processDroneVideo(videoFile) {
     videoExtractBar.classList.remove('hidden');
     extractStatusText.textContent = `Analyzing drone video: ${videoFile.name}...`;
@@ -277,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateGalleryUI() {
     imageCountNum.textContent = state.files.length;
-    
+
     if (state.files.length > 0) {
       galleryContainer.classList.remove('hidden');
       generateBtn.disabled = state.files.length < 2;
@@ -294,7 +273,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const overlay = document.createElement('div');
         overlay.className = 'card-overlay';
-        
+
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-btn';
         removeBtn.innerHTML = '✕';
@@ -317,7 +296,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Settings Panel ---
   settingsToggle.addEventListener('click', () => {
     const isCollapsed = settingsContent.classList.toggle('collapsed');
     settingsToggle.setAttribute('aria-expanded', !isCollapsed);
@@ -329,7 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
     iterVal.textContent = e.target.value;
   });
 
-  // --- Optimization Preset Buttons ---
   const presetButtons = document.querySelectorAll('.preset-btn');
   let selectedPreset = 'balanced';
 
@@ -355,7 +332,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // --- Generation / Reconstruction Trigger with Live 3D Framing ---
   const cfgRemoveBg = document.getElementById('cfg-remove-bg');
 
   generateBtn.addEventListener('click', async () => {
@@ -372,7 +348,6 @@ document.addEventListener('DOMContentLoaded', () => {
       remove_background: cfgRemoveBg ? cfgRemoveBg.checked : true
     };
 
-    // Transition directly to 3D Viewport with Live Framing
     showView('viewer-section');
     state.viewer.onResize();
     state.viewer.setupLiveFraming(state.files);
@@ -405,7 +380,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // --- Polling & Progress Updates ---
   function startPolling(jobId) {
     if (state.pollTimer) clearInterval(state.pollTimer);
 
@@ -481,7 +455,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Cancel Mission ---
   async function handleCancelJob() {
     if (!state.currentJobId) return;
     if (confirm('Cancel the active 3D reconstruction mission?')) {
@@ -511,7 +484,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- View Routing System ---
   function showView(viewId) {
     [homeSection, uploadSection, viewerSection].forEach(section => {
       if (section) section.classList.remove('active');
@@ -519,7 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const target = document.getElementById(viewId);
     if (target) target.classList.add('active');
 
-    // Update Nav Pills
     if (navBtnHome) navBtnHome.classList.toggle('active', viewId === 'home-section');
     if (navBtnCreate) navBtnCreate.classList.toggle('active', viewId === 'upload-section');
     if (navBtnViewer) navBtnViewer.classList.toggle('active', viewId === 'viewer-section');
@@ -529,7 +500,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Interactive Demo 3D Model Loader ---
   const DEFAULT_DEMO_MODEL = '/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb';
 
   async function loadDemoModel(modelUrl, title = 'Tactical UAV Survey Alpha', badgeText = 'UAV Flight Stream • 16 Keyframes') {
@@ -546,7 +516,6 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Nav Links
   if (navBtnHome) {
     navBtnHome.addEventListener('click', () => showView('home-section'));
   }
@@ -571,7 +540,6 @@ document.addEventListener('DOMContentLoaded', () => {
     backToHomeBtn.addEventListener('click', () => showView('home-section'));
   }
 
-  // Landing Page Hero & Action Buttons
   if (heroBtnExplore) {
     heroBtnExplore.addEventListener('click', () => {
       loadDemoModel(DEFAULT_DEMO_MODEL, 'Tactical UAV Survey Alpha', 'UAV Flight Stream • 16 Keyframes');
@@ -589,7 +557,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // Showcase Demo Cards Click Handlers
   document.querySelectorAll('.showcase-card').forEach(card => {
     card.addEventListener('click', (e) => {
       const modelUrl = card.dataset.model;
@@ -601,11 +568,10 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Hero Photo Collage Frames Click Handlers
   document.querySelectorAll('.photo-frame').forEach((frame, idx) => {
     frame.addEventListener('click', () => {
       const label = frame.getAttribute('data-label') || 'Neural 3D Reconstruction';
-      // Load corresponding demo model
+
       const demoModels = [
         { url: '/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb', title: 'Tactical UAV Survey Alpha' },
         { url: '/storage/jobs/1871f0ea-0247-4629-9670-d794e8b28980/outputs/scene.glb', title: 'Infrastructure & Facade Mapping' },
@@ -617,7 +583,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Viewport Demo Model Selector Dropdown
   if (demoModelSelect) {
     demoModelSelect.addEventListener('change', (e) => {
       const selectedUrl = e.target.value;
@@ -631,19 +596,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const precisionFilterSelect = document.getElementById('precision-filter-select');
 
-  // --- On Job Completed ---
   async function onJobCompleted(job) {
     if (livePipelineHud) livePipelineHud.classList.add('hidden');
     if (viewerHeaderTitle) viewerHeaderTitle.textContent = '3D Scene Reconstructed';
-    
+
     showView('viewer-section');
     state.viewer.onResize();
 
-    const glbUrl = job.output_files && job.output_files.glb 
-      ? job.output_files.glb 
+    const glbUrl = job.output_files && job.output_files.glb
+      ? job.output_files.glb
       : `/storage/jobs/${job.job_id}/outputs/scene.glb`;
 
-    // Reset precision select dropdown to default clean scene
     if (precisionFilterSelect) {
       precisionFilterSelect.value = 'scene.glb';
     }
@@ -655,13 +618,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // --- Precision & Confidence Filter Selector ---
   if (precisionFilterSelect) {
     precisionFilterSelect.addEventListener('change', async (e) => {
       if (!state.currentJobId) return;
       const targetFilename = e.target.value || 'scene.glb';
       const targetUrl = `/storage/jobs/${state.currentJobId}/outputs/${targetFilename}`;
-      
+
       try {
         await state.viewer.loadModel(targetUrl, null, 'glb');
         if (viewGlbBtn && viewPlyBtn) {
@@ -674,7 +636,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // --- 3D Viewer Toolbar Handlers ---
   btnResetCam.addEventListener('click', () => state.viewer.resetCamera());
 
   btnAutoRotate.addEventListener('click', () => {

@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
-# ==============================================================================
-# Render 3D — 1-Click Launch & Auto-Setup Script
-# Portable across any laptop (macOS / Linux / Windows WSL2)
-# ==============================================================================
 
 set -e
 
-# Detect script directory
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT_DIR"
 
@@ -14,13 +9,11 @@ echo "================================================================="
 echo "   🛰️  Render 3D — Aerial Reconnaissance & 3D Reconstruction    "
 echo "================================================================="
 
-# 1. Environment file check
 if [ ! -f ".env" ]; then
     echo "⚙️ Creating .env from .env.example..."
     cp .env.example .env
 fi
 
-# 2. MUSt3R Repository Auto-Discovery & Auto-Clone
 MUST3R_PATH=""
 if [ -d "$HOME/must3r" ]; then
     MUST3R_PATH="$HOME/must3r"
@@ -35,14 +28,12 @@ else
     echo "✅ MUSt3R cloned successfully."
 fi
 
-# Ensure DUSt3R and submodules (croco) exist inside must3r/dust3r
 if [ ! -d "$MUST3R_PATH/dust3r/dust3r" ]; then
     echo "📥 Initializing and cloning DUSt3R submodules into $MUST3R_PATH/dust3r..."
     rm -rf "$MUST3R_PATH/dust3r"
     git clone --recursive https://github.com/naver/dust3r.git "$MUST3R_PATH/dust3r"
 fi
 
-# 3. Model Weights Check & Auto-Download
 MODELS_DIR="$MUST3R_PATH/models"
 mkdir -p "$MODELS_DIR"
 
@@ -63,7 +54,6 @@ download_file() {
 download_file "https://download.europe.naverlabs.com/must3r/MUSt3R_512.pth" "$MODELS_DIR/MUSt3R_512.pth" "MUSt3R 512 Backbone (~1.6 GB)"
 download_file "https://download.europe.naverlabs.com/must3r/MUSt3R_512_retrieval_trainingfree.pth" "$MODELS_DIR/MUSt3R_512_retrieval_trainingfree.pth" "Retrieval Weights (8.4 MB)"
 
-# 4. Virtual Environment Detection & Setup
 VENV_DIR=""
 if [ -d "$MUST3R_PATH/.venv" ]; then
     VENV_DIR="$MUST3R_PATH/.venv"
@@ -78,11 +68,9 @@ fi
 PYTHON="$VENV_DIR/bin/python"
 PIP="$VENV_DIR/bin/pip"
 
-# 5. Dependency Check
 echo "🔍 Checking dependencies..."
 $PIP install -q -r backend/requirements.txt
 
-# 6. Launch FastAPI Server
 PORT=8000
 HOST="127.0.0.1"
 
@@ -91,7 +79,6 @@ echo "🚀 Starting Render 3D Server on http://$HOST:$PORT ..."
 echo "🌐 Open your browser at: http://$HOST:$PORT"
 echo "================================================================="
 
-# Open browser automatically if on macOS
 if [[ "$OSTYPE" == "darwin"* ]]; then
     (sleep 1.5 && open "http://$HOST:$PORT") &
 elif [[ "$OSTYPE" == "linux-gnu"* ]]; then

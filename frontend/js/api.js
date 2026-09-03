@@ -1,12 +1,8 @@
-/**
- * API client for 3D Reconstruction Backend
- */
+
+
 const API = {
   baseUrl: '',
 
-  /**
-   * Check system health and MUSt3R readiness
-   */
   async checkHealth() {
     const response = await fetch(`${this.baseUrl}/api/health`);
     if (!response.ok) {
@@ -15,14 +11,9 @@ const API = {
     return await response.json();
   },
 
-  /**
-   * Create a new 3D reconstruction job by uploading image files
-   * @param {File[]} files
-   * @param {Object} config
-   */
   async createJob(files, config = {}) {
     const formData = new FormData();
-    
+
     files.forEach(file => {
       formData.append('files', file);
     });
@@ -50,10 +41,6 @@ const API = {
     return await response.json();
   },
 
-  /**
-   * Retrieve current progress, stage, logs, and output models for a job
-   * @param {string} jobId
-   */
   async getJobStatus(jobId) {
     const response = await fetch(`${this.baseUrl}/api/reconstruction/jobs/${jobId}`);
     if (!response.ok) {
@@ -62,10 +49,6 @@ const API = {
     return await response.json();
   },
 
-  /**
-   * Cancel an active reconstruction job
-   * @param {string} jobId
-   */
   async cancelJob(jobId) {
     const response = await fetch(`${this.baseUrl}/api/reconstruction/jobs/${jobId}/cancel`, {
       method: 'POST'
@@ -76,11 +59,6 @@ const API = {
     return await response.json();
   },
 
-  /**
-   * Get direct download link for GLB or PLY
-   * @param {string} jobId
-   * @param {'glb'|'ply'} format
-   */
   getDownloadUrl(jobId, format) {
     return `${this.baseUrl}/api/reconstruction/jobs/${jobId}/download/${format}`;
   }

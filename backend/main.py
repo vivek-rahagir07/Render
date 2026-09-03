@@ -10,7 +10,6 @@ BACKEND_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 STORAGE_DIR = BASE_DIR / "storage"
 
-# Add directories to sys.path for direct script execution
 if str(BASE_DIR) not in sys.path:
     sys.path.insert(0, str(BASE_DIR))
 if str(BACKEND_DIR) not in sys.path:
@@ -26,13 +25,10 @@ try:
 except ImportError:
     from reconstruction_service import ReconstructionService, JobConfig, JobStatus
 
-# Instantiate service
 service = ReconstructionService(base_storage_dir=str(STORAGE_DIR / "jobs"))
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Start the async background worker
     import asyncio
     worker_task = asyncio.create_task(service.start_worker())
     yield
@@ -42,7 +38,6 @@ async def lifespan(app: FastAPI):
     except asyncio.CancelledError:
         pass
 
-
 app = FastAPI(
     title="AEROVOX — 3D Reconstruction API",
     description="AEROVOX: Local-first 3D neural reconstruction using MUSt3R and PyTorch MPS",
@@ -50,7 +45,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# CORS middleware for local development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -58,7 +52,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 @app.get("/api/health")
 async def health_check():
@@ -68,7 +61,6 @@ async def health_check():
         "status": "healthy" if env_info["is_ready"] else "degraded",
         "environment": env_info
     }
-
 
 @app.post("/api/reconstruction/jobs")
 async def create_reconstruction_job(
@@ -93,7 +85,6 @@ async def create_reconstruction_job(
             detail=f"3D reconstruction requires at least 2 images (received {len(files)}). 20-40 images recommended."
         )
 
-    # Configure job
     cfg = JobConfig(
         image_size=image_size,
         device=device,
@@ -117,7 +108,6 @@ async def create_reconstruction_job(
             service.validate_and_save_image(job.job_id, file.filename, content)
             saved_count += 1
         except Exception as e:
-            # Clean up on failure
             job_dir = service.storage_dir / job.job_id
             shutil.rmtree(job_dir, ignore_errors=True)
             raise HTTPException(
@@ -131,7 +121,6 @@ async def create_reconstruction_job(
             detail="Less than 2 valid images could be saved for reconstruction."
         )
 
-    # Queue job for async execution
     await service.submit_job(job.job_id)
 
     return {
@@ -140,7 +129,6 @@ async def create_reconstruction_job(
         "image_count": saved_count,
         "message": f"Job queued successfully with {saved_count} images."
     }
-
 
 @app.get("/api/reconstruction/jobs/{job_id}")
 async def get_job_status(job_id: str):
@@ -161,9 +149,8 @@ async def get_job_status(job_id: str):
         "completed_at": job.completed_at,
         "output_files": job.output_files,
         "error": job.error,
-        "logs": job.logs[-50:]  # Return most recent 50 logs for UI streaming
+        "logs": job.logs[-50:]
     }
-
 
 @app.post("/api/reconstruction/jobs/{job_id}/cancel")
 async def cancel_job(job_id: str):
@@ -175,7 +162,6 @@ async def cancel_job(job_id: str):
             detail=f"Job {job_id} could not be cancelled or is already completed/failed."
         )
     return {"job_id": job_id, "status": "cancelled", "message": "Job cancelled successfully."}
-
 
 @app.get("/api/reconstruction/jobs/{job_id}/download/{format}")
 async def download_model(job_id: str, format: str):
@@ -200,8 +186,6 @@ async def download_model(job_id: str, format: str):
         filename=download_filename
     )
 
-
-# Mount static assets
 if STORAGE_DIR.exists():
     app.mount("/storage", StaticFiles(directory=str(STORAGE_DIR)), name="storage")
 

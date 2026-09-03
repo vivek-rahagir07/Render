@@ -1,18 +1,4 @@
-/**
- * AEROVOX — Advanced Three.js 3D Geospatial Viewer & Tactical Aerial Studio
- * 
- * Features:
- *   - Spatial Holographic Keyframe Viewers with Optical Ray Frustums & Ground Tethers
- *   - Animated Drone Flight Path Spline with Real-Time Tracer Particle
- *   - Futuristic Tri-Axis Gyroscopic Reconnaissance Core with Ground Radar Scan Rings
- *   - Floating Ambient Geospatial Depth Particles
- *   - High-Tech Circular Polar/Tactical Radar Ground Grid
- *   - 3D Metric Measurement Ruler Tool with Dynamic Distance Labels
- *   - Calibrated Gaussian Circular Splats for Ultra-Smooth Dense Point Clouds
- *   - Dual GLB (PBR Mesh/Points) and PLY Direct Rendering
- *   - High-Res Tactical Snapshot Capture
- *   - Atmosphere & Environment Lighting Presets
- */
+
 
 class ModelViewer {
   constructor(containerId) {
@@ -32,15 +18,13 @@ class ModelViewer {
     this.initialCameraState = null;
     this.sceneBoundingRadius = 1.5;
     this.clock = new THREE.Clock();
-    
-    // Measurement Tool states
+
     this.isMeasuring = false;
     this.measurePoints = [];
     this.measureGroup = new THREE.Group();
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
 
-    // Config states
     this.pointSize = 1.0;
     this.pointStyle = 'smooth';
     this.showCameraFrustums = false;
@@ -53,20 +37,15 @@ class ModelViewer {
       { name: 'Matrix Green', bg: 0x06080D, grid1: 0x20D3A2, grid2: 0x0D1119, ring: 0x20D3A2 }
     ];
 
-    // Texture cache for circular soft splats
     this.circleTexture = this._createCircleTexture();
     this.cardBorderTexture = this._createCardBorderTexture();
 
-    // Track point cloud objects for real-time updates
     this._pointObjects = [];
     this._objectUrlsToRevoke = [];
 
     this.init();
   }
 
-  /**
-   * Generates a high-quality radial gradient alpha texture for circular splat rendering
-   */
   _createCircleTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 64;
@@ -87,9 +66,6 @@ class ModelViewer {
     return texture;
   }
 
-  /**
-   * Generates a rounded glowing border texture for spatial keyframe holographic cards
-   */
   _createCardBorderTexture() {
     const canvas = document.createElement('canvas');
     canvas.width = 128;
@@ -100,22 +76,21 @@ class ModelViewer {
     ctx.lineWidth = 4;
     ctx.strokeRect(4, 4, 120, 120);
 
-    // Subtle corner accents
     ctx.strokeStyle = '#ffffff';
     ctx.lineWidth = 6;
-    // Top-left
+
     ctx.beginPath();
     ctx.moveTo(4, 20); ctx.lineTo(4, 4); ctx.lineTo(20, 4);
     ctx.stroke();
-    // Top-right
+
     ctx.beginPath();
     ctx.moveTo(108, 4); ctx.lineTo(124, 4); ctx.lineTo(124, 20);
     ctx.stroke();
-    // Bottom-left
+
     ctx.beginPath();
     ctx.moveTo(4, 108); ctx.lineTo(4, 124); ctx.lineTo(20, 124);
     ctx.stroke();
-    // Bottom-right
+
     ctx.beginPath();
     ctx.moveTo(108, 124); ctx.lineTo(124, 124); ctx.lineTo(124, 108);
     ctx.stroke();
@@ -127,19 +102,16 @@ class ModelViewer {
   init() {
     if (!this.container) return;
 
-    // Scene
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.themes[0].bg);
     this.scene.fog = new THREE.FogExp2(this.themes[0].bg, 0.025);
     this.scene.add(this.measureGroup);
 
-    // Camera
     const width = this.container.clientWidth || window.innerWidth;
     const height = this.container.clientHeight || window.innerHeight;
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.01, 1000);
     this.camera.position.set(0, 2.2, 4.6);
 
-    // Renderer
     this.renderer = new THREE.WebGLRenderer({
       antialias: true,
       alpha: true,
@@ -153,7 +125,6 @@ class ModelViewer {
     this.renderer.toneMappingExposure = 1.2;
     this.container.appendChild(this.renderer.domElement);
 
-    // Controls
     this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
     this.controls.dampingFactor = 0.06;
@@ -163,7 +134,6 @@ class ModelViewer {
     this.controls.autoRotate = false;
     this.controls.autoRotateSpeed = 1.4;
 
-    // Studio Lighting
     const ambientLight = new THREE.AmbientLight(0xffffff, 1.3);
     this.scene.add(ambientLight);
 
@@ -179,25 +149,17 @@ class ModelViewer {
     rimLight.position.set(0, -10, 2);
     this.scene.add(rimLight);
 
-    // Build High-Tech Geospatial Grid
     this._buildGeospatialGrid();
 
-    // Build Ambient Floating Particles
     this._buildAmbientParticles();
 
-    // Setup Click listener for 3D Measurement Tool
     this.renderer.domElement.addEventListener('pointerdown', (e) => this._onPointerDown(e));
 
-    // Window resize handler
     window.addEventListener('resize', () => this.onResize());
 
-    // Start animation loop
     this.animate();
   }
 
-  /**
-   * Builds an ultra-clean tactical geospatial grid with primary/secondary rings
-   */
   _buildGeospatialGrid() {
     if (this.gridGroup) {
       this.scene.remove(this.gridGroup);
@@ -206,13 +168,11 @@ class ModelViewer {
     this.gridGroup = new THREE.Group();
     this.gridGroup.position.y = -0.65;
 
-    // 1. Orthogonal grid lines with soft opacity
     const gridHelper = new THREE.GridHelper(12, 32, this.themes[0].grid1, this.themes[0].grid2);
     gridHelper.material.transparent = true;
     gridHelper.material.opacity = 0.55;
     this.gridGroup.add(gridHelper);
 
-    // 2. Tactical Concentric Radar Rings
     const ringRadii = [1.2, 2.4, 3.8, 5.2];
     ringRadii.forEach((r, idx) => {
       const ringGeom = new THREE.RingGeometry(r - 0.008, r + 0.008, 64);
@@ -227,7 +187,6 @@ class ModelViewer {
       this.gridGroup.add(ringMesh);
     });
 
-    // 3. Ground Radar Sweep Beam (interactive animated)
     const sweepGeom = new THREE.CircleGeometry(4.0, 32, 0, Math.PI / 3);
     const sweepMat = new THREE.MeshBasicMaterial({
       color: this.themes[0].ring,
@@ -242,9 +201,6 @@ class ModelViewer {
     this.scene.add(this.gridGroup);
   }
 
-  /**
-   * Adds subtle floating ambient data dust particles to give profound geospatial 3D depth
-   */
   _buildAmbientParticles() {
     const particleCount = 140;
     const geom = new THREE.BufferGeometry();
@@ -273,10 +229,9 @@ class ModelViewer {
 
   animate() {
     requestAnimationFrame(() => this.animate());
-    
+
     const elapsedTime = this.clock.getElapsedTime();
 
-    // 1. Animate Gyroscopic Holographic Core
     if (this.hologramCore) {
       if (this.hologramCore.ring1) this.hologramCore.ring1.rotation.y = elapsedTime * 0.8;
       if (this.hologramCore.ring2) this.hologramCore.ring2.rotation.x = elapsedTime * 0.6;
@@ -289,12 +244,10 @@ class ModelViewer {
       }
     }
 
-    // 2. Animate Ground Radar Sweep Ring
     if (this.groundRadarRing) {
       this.groundRadarRing.rotation.z = elapsedTime * 0.6;
     }
 
-    // 3. Animate Flight Path Tracer along drone trajectory spline
     if (this.flightSplineCurve && this.flightTracerMesh) {
       const t = (elapsedTime * 0.12) % 1.0;
       const pt = this.flightSplineCurve.getPointAt(t);
@@ -303,7 +256,6 @@ class ModelViewer {
       }
     }
 
-    // 4. Slowly drift ambient geospatial particles
     if (this.ambientParticles) {
       this.ambientParticles.rotation.y = elapsedTime * 0.02;
     }
@@ -325,9 +277,6 @@ class ModelViewer {
     this.renderer.setSize(width, height);
   }
 
-  /**
-   * 3D Metric Measurement Ruler Tool
-   */
   toggleMeasurementTool() {
     this.isMeasuring = !this.isMeasuring;
     this.measurePoints = [];
@@ -354,7 +303,7 @@ class ModelViewer {
 
   _onPointerDown(e) {
     if (!this.isMeasuring) return;
-    if (e.button !== 0) return; // Left click only
+    if (e.button !== 0) return;
 
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -381,7 +330,6 @@ class ModelViewer {
 
     this.measurePoints.push(point);
 
-    // Glowing target marker node
     const markerGroup = new THREE.Group();
     markerGroup.position.copy(point);
 
@@ -390,7 +338,6 @@ class ModelViewer {
     const dotMesh = new THREE.Mesh(dotGeom, dotMat);
     markerGroup.add(dotMesh);
 
-    // Outer target ring
     const ringGeom = new THREE.RingGeometry(0.07, 0.085, 24);
     const ringMat = new THREE.MeshBasicMaterial({ color: 0xfacc15, side: THREE.DoubleSide });
     const ringMesh = new THREE.Mesh(ringGeom, ringMat);
@@ -407,7 +354,6 @@ class ModelViewer {
       const p1 = this.measurePoints[0];
       const p2 = this.measurePoints[1];
 
-      // Laser Line
       const lineGeom = new THREE.BufferGeometry().setFromPoints([p1, p2]);
       const lineMat = new THREE.LineDashedMaterial({
         color: 0xfacc15,
@@ -419,9 +365,8 @@ class ModelViewer {
       line.computeLineDistances();
       this.measureGroup.add(line);
 
-      // Distance calculation
       const rawDistance = p1.distanceTo(p2);
-      const metricScaleFactor = 5.0; // Drone metric estimation factor
+      const metricScaleFactor = 5.0;
       const metricDistance = (rawDistance * metricScaleFactor).toFixed(2);
       const deltaHeight = (Math.abs(p2.y - p1.y) * metricScaleFactor).toFixed(2);
 
@@ -443,10 +388,6 @@ class ModelViewer {
     }
   }
 
-  /**
-   * Sets up real-time 3D Image Framing & Live Pipeline Visualizer
-   * Creates sleek, refined spatial photo holographic cards with delicate optical frustums
-   */
   setupLiveFraming(files) {
     this.clearLiveFraming();
 
@@ -461,23 +402,19 @@ class ModelViewer {
     const radius = 2.5;
     const textureLoader = new THREE.TextureLoader();
 
-    // 1. Futuristic Tri-Axis Gyroscopic Reconnaissance Core
     const coreGroup = new THREE.Group();
-    
-    // Outer Torus Ring 1
+
     const tGeom1 = new THREE.TorusGeometry(0.55, 0.012, 16, 64);
     const tMat1 = new THREE.MeshBasicMaterial({ color: 0x00E5FF, transparent: true, opacity: 0.75 });
     const ring1 = new THREE.Mesh(tGeom1, tMat1);
     coreGroup.add(ring1);
 
-    // Inner Torus Ring 2
     const tGeom2 = new THREE.TorusGeometry(0.42, 0.01, 16, 64);
     const tMat2 = new THREE.MeshBasicMaterial({ color: 0x4D7CFE, transparent: true, opacity: 0.65 });
     const ring2 = new THREE.Mesh(tGeom2, tMat2);
     ring2.rotation.x = Math.PI / 4;
     coreGroup.add(ring2);
 
-    // Core Octahedron Crystal
     const octGeom = new THREE.OctahedronGeometry(0.24, 0);
     const octMat = new THREE.MeshStandardMaterial({
       color: 0x00E5FF,
@@ -489,7 +426,6 @@ class ModelViewer {
     const coreMesh = new THREE.Mesh(octGeom, octMat);
     coreGroup.add(coreMesh);
 
-    // Target Crosshair Beams
     const crossMat = new THREE.LineBasicMaterial({ color: 0x00E5FF, transparent: true, opacity: 0.35 });
     const crossPoints = [
       new THREE.Vector3(-0.8, 0, 0), new THREE.Vector3(0.8, 0, 0),
@@ -508,7 +444,6 @@ class ModelViewer {
     };
     this.liveFramingGroup.add(coreGroup);
 
-    // 2. Trajectory points for drone flight path spline
     const trajectoryPoints = [];
 
     for (let i = 0; i < count; i++) {
@@ -534,7 +469,6 @@ class ModelViewer {
         const w = 0.46;
         const h = w / aspect;
 
-        // Photo thumbnail plane
         const planeGeom = new THREE.PlaneGeometry(w, h);
         const planeMat = new THREE.MeshBasicMaterial({
           map: tex,
@@ -543,7 +477,6 @@ class ModelViewer {
         const planeMesh = new THREE.Mesh(planeGeom, planeMat);
         cardGroup.add(planeMesh);
 
-        // Holographic Glass Border
         const borderGeom = new THREE.PlaneGeometry(w * 1.04, h * 1.04);
         const borderMat = new THREE.MeshBasicMaterial({
           color: 0x00E5FF,
@@ -555,12 +488,11 @@ class ModelViewer {
         borderMesh.position.z = -0.001;
         cardGroup.add(borderMesh);
 
-        // Sleek 4-ray optical camera frustum to center lens node
         const lensApex = new THREE.Vector3(0, 0, -0.25);
         const halfW = w / 2;
         const halfH = h / 2;
         const frustumPoints = [
-          // 4 corners of plane to apex
+
           new THREE.Vector3(-halfW, -halfH, 0), lensApex,
           new THREE.Vector3(halfW, -halfH, 0), lensApex,
           new THREE.Vector3(halfW, halfH, 0), lensApex,
@@ -575,7 +507,6 @@ class ModelViewer {
         const frustumLines = new THREE.LineSegments(frustumGeom, frustumMat);
         cardGroup.add(frustumLines);
 
-        // Glowing Apex Camera Lens Node
         const lensGeom = new THREE.SphereGeometry(0.02, 12, 12);
         const lensMat = new THREE.MeshBasicMaterial({ color: 0x4D7CFE });
         const lensMesh = new THREE.Mesh(lensGeom, lensMat);
@@ -583,7 +514,6 @@ class ModelViewer {
         cardGroup.add(lensMesh);
       });
 
-      // Ground Altitude Drop Tether Line & Target Footprint
       const groundY = -0.65;
       const tetherPoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(x, groundY, z)];
       const tetherGeom = new THREE.BufferGeometry().setFromPoints(tetherPoints);
@@ -598,7 +528,6 @@ class ModelViewer {
       tetherLine.computeLineDistances();
       this.liveFramingGroup.add(tetherLine);
 
-      // Small ground target ring
       const groundRingGeom = new THREE.RingGeometry(0.04, 0.06, 16);
       const groundRingMat = new THREE.MeshBasicMaterial({
         color: 0x00E5FF,
@@ -611,7 +540,6 @@ class ModelViewer {
       groundRing.rotation.x = Math.PI / 2;
       this.liveFramingGroup.add(groundRing);
 
-      // Subtle Center Targeting Ray
       const centerRayPoints = [new THREE.Vector3(x, y, z), new THREE.Vector3(0, 0, 0)];
       const centerRayGeom = new THREE.BufferGeometry().setFromPoints(centerRayPoints);
       const centerRayMat = new THREE.LineBasicMaterial({
@@ -625,7 +553,6 @@ class ModelViewer {
       this.liveFramingGroup.add(cardGroup);
     }
 
-    // 3. Drone Flight Trajectory Path Spline & Animated Tracer Particle
     if (trajectoryPoints.length > 2) {
       this.flightSplineCurve = new THREE.CatmullRomCurve3(trajectoryPoints, true);
       const splinePoints = this.flightSplineCurve.getPoints(120);
@@ -638,7 +565,6 @@ class ModelViewer {
       const pathLine = new THREE.Line(splineGeom, splineMat);
       this.liveFramingGroup.add(pathLine);
 
-      // Glowing Flight Path Tracer Orb
       const tracerGeom = new THREE.SphereGeometry(0.05, 16, 16);
       const tracerMat = new THREE.MeshBasicMaterial({ color: 0x4D7CFE });
       this.flightTracerMesh = new THREE.Mesh(tracerGeom, tracerMat);
@@ -664,14 +590,14 @@ class ModelViewer {
   updateLiveFramingStage(stageName, progress) {
     if (!this.hologramCore || !this.hologramCore.core) return;
     const stage = (stageName || '').toLowerCase();
-    
-    let color = 0x00E5FF; // Cyan primary
+
+    let color = 0x00E5FF;
     if (stage.includes('match') || stage.includes('pair')) {
-      color = 0x4D7CFE; // Blue
+      color = 0x4D7CFE;
     } else if (stage.includes('refine') || stage.includes('optim') || stage.includes('converge')) {
-      color = 0xF6C453; // Amber
+      color = 0xF6C453;
     } else if (stage.includes('export') || stage.includes('scene') || stage.includes('complete')) {
-      color = 0x20D3A2; // Success
+      color = 0x20D3A2;
     }
 
     if (this.hologramCore.core.material) {
@@ -700,9 +626,6 @@ class ModelViewer {
     this._objectUrlsToRevoke = [];
   }
 
-  /**
-   * Load either a GLB scene or a PLY point cloud model
-   */
   async loadModel(url, onProgress = null, format = 'glb') {
     this.clearLiveFraming();
 
