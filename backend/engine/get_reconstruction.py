@@ -217,22 +217,38 @@ def export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=Tr
 
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(pts_aligned)
-        if clean_cols is not None and len(clean_cols) == len(clean_pts):
+        has_color = clean_cols is not None and len(clean_cols) == len(clean_pts)
+        if has_color:
             c = clean_cols.astype(np.float64)
             if c.max() > 1.0:
                 c = c / 255.0
             pcd.colors = o3d.utility.Vector3dVector(c)
 
-        pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=0.15, max_nn=30))
-        pcd.orient_normals_consistent_tangent_plane(k=15)
+        bbox = pcd.get_axis_aligned_bounding_box()
+        diag = np.linalg.norm(bbox.get_extent())
+        if len(pcd.points) > 70000:
+            v_size = max(0.008, diag / 350.0)
+            pcd = pcd.voxel_down_sample(voxel_size=v_size)
 
-        depth = 9 if len(clean_pts) > 20000 else 8
-        mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=depth)
+        pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamHybrid(radius=max(0.04, diag / 120.0), max_nn=35))
+        pcd.orient_normals_consistent_tangent_plane(k=20)
+
+        mesh, densities = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=9, linear_fit=True)
 
         densities = np.asarray(densities)
         if len(densities) > 0:
-            trim_mask = densities < np.quantile(densities, 0.05)
+            trim_mask = densities < np.quantile(densities, 0.03)
             mesh.remove_vertices_by_mask(trim_mask)
+
+        if pcd.has_colors():
+            pcd_tree = o3d.geometry.KDTreeFlann(pcd)
+            mesh_verts = np.asarray(mesh.vertices)
+            pcd_cols = np.asarray(pcd.colors)
+            k_indices = []
+            for v in mesh_verts:
+                _, idx, _ = pcd_tree.search_knn_vector_3d(v, 1)
+                k_indices.append(idx[0])
+            mesh.vertex_colors = o3d.utility.Vector3dVector(pcd_cols[k_indices])
 
         mesh.compute_vertex_normals()
         mesh.compute_triangle_normals()
@@ -240,24 +256,20 @@ def export_surface_mesh(clean_pts, clean_cols, transform_mat, outdir, verbose=Tr
         stl_path = os.path.join(outdir, "scene_mesh.stl")
         obj_path = os.path.join(outdir, "scene_mesh.obj")
         glb_path = os.path.join(outdir, "scene_mesh.glb")
+        points_glb_path = os.path.join(outdir, "scene_points.glb")
+        main_glb_path = os.path.join(outdir, "scene.glb")
 
         o3d.io.write_triangle_mesh(stl_path, mesh)
         o3d.io.write_triangle_mesh(obj_path, mesh)
+        o3d.io.write_triangle_mesh(glb_path, mesh)
 
-        try:
-            import trimesh
-            t_mesh = trimesh.Trimesh(
-                vertices=np.asarray(mesh.vertices),
-                faces=np.asarray(mesh.triangles),
-                vertex_normals=np.asarray(mesh.vertex_normals) if mesh.has_vertex_normals() else None,
-                vertex_colors=np.asarray(mesh.vertex_colors) if mesh.has_vertex_colors() else None
-            )
-            t_mesh.export(glb_path)
-        except Exception:
-            o3d.io.write_triangle_mesh(glb_path, mesh)
+        import shutil
+        if os.path.isfile(main_glb_path) and not os.path.isfile(points_glb_path):
+            shutil.copyfile(main_glb_path, points_glb_path)
+        shutil.copyfile(glb_path, main_glb_path)
 
         if verbose:
-            print(f"Exported watertight surface mesh ({len(mesh.triangles)} triangles) -> {stl_path}, {obj_path}, {glb_path}")
+            print(f"Exported dense solid mesh ({len(mesh.triangles)} triangles, {len(mesh.vertices)} vertices) -> {stl_path}, {obj_path}, {glb_path}")
         return True
     except Exception as e:
         if verbose:

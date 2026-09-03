@@ -783,27 +783,26 @@ class ModelViewer {
 
   async toggleMeshMode(jobId) {
     if (!this.meshMode) {
-      this._previousModelUrl = this._currentUrl;
-      const meshUrl = jobId ? `/storage/jobs/${jobId}/outputs/scene_mesh.glb` : null;
-      if (meshUrl) {
+      const pointsUrl = jobId ? `/storage/jobs/${jobId}/outputs/scene_points.glb` : null;
+      if (pointsUrl) {
         try {
-          await this.loadModel(meshUrl, null, 'glb');
+          await this.loadModel(pointsUrl, null, 'glb');
           this.meshMode = true;
-          this._updateStatsBadge(0, 'Watertight Solid Mesh');
+          this._updateStatsBadge(0, 'Point Cloud View');
           return true;
         } catch (err) {
-          console.warn('Surface mesh not yet generated:', err);
+          console.warn('Point cloud not available:', err);
         }
       }
     } else {
-      if (this._previousModelUrl) {
-        try {
-          await this.loadModel(this._previousModelUrl, null, 'glb');
-          this.meshMode = false;
-          return false;
-        } catch (err) {
-          console.warn('Failed to revert to point cloud:', err);
-        }
+      const meshUrl = jobId ? `/storage/jobs/${jobId}/outputs/scene.glb` : this._currentUrl;
+      try {
+        await this.loadModel(meshUrl, null, 'glb');
+        this.meshMode = false;
+        this._updateStatsBadge(0, 'Dense Solid Mesh');
+        return false;
+      } catch (err) {
+        console.warn('Failed to reload solid mesh:', err);
       }
       this.meshMode = false;
       return false;

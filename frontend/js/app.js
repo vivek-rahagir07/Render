@@ -647,25 +647,44 @@ document.addEventListener('DOMContentLoaded', () => {
     btnAutoRotate.classList.toggle('active', isRotating);
   });
 
-  btnToggleGrid.addEventListener('click', () => {
-    const isVisible = state.viewer.toggleGrid();
-    btnToggleGrid.classList.toggle('active', isVisible);
-  });
+  if (document.getElementById('btn-toggle-grid')) {
+    document.getElementById('btn-toggle-grid').addEventListener('click', () => {
+      const isVisible = state.viewer.toggleGrid();
+      document.getElementById('btn-toggle-grid').classList.toggle('active', isVisible);
+    });
+  }
 
-  btnPointStyle.addEventListener('click', () => {
-    const newStyle = state.viewer.togglePointStyle();
-    pointStyleLabel.textContent = newStyle === 'smooth' ? 'Splats' : 'Points';
-    btnPointStyle.classList.toggle('active', newStyle === 'smooth');
-  });
+  if (document.getElementById('btn-point-style')) {
+    document.getElementById('btn-point-style').addEventListener('click', () => {
+      const newStyle = state.viewer.togglePointStyle();
+      const lbl = document.getElementById('point-style-label');
+      if (lbl) lbl.textContent = newStyle === 'smooth' ? 'Splats' : 'Points';
+      document.getElementById('btn-point-style').classList.toggle('active', newStyle === 'smooth');
+    });
+  }
 
-  btnToggleBg.addEventListener('click', () => {
-    state.viewer.toggleBackground();
-  });
+  if (document.getElementById('btn-toggle-bg')) {
+    document.getElementById('btn-toggle-bg').addEventListener('click', () => {
+      state.viewer.toggleBackground();
+    });
+  }
 
-  btnToggleCams.addEventListener('click', () => {
-    const isVisible = state.viewer.toggleCameraFrustums();
-    btnToggleCams.classList.toggle('active', isVisible);
-  });
+  if (document.getElementById('btn-toggle-cams')) {
+    document.getElementById('btn-toggle-cams').addEventListener('click', () => {
+      const isVisible = state.viewer.toggleCameraFrustums();
+      document.getElementById('btn-toggle-cams').classList.toggle('active', isVisible);
+    });
+  }
+
+  const downloadMenuBtn = document.getElementById('download-menu-btn');
+  const downloadMenuWrap = downloadMenuBtn ? downloadMenuBtn.closest('.download-menu-wrap') : null;
+  if (downloadMenuBtn && downloadMenuWrap) {
+    downloadMenuBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      downloadMenuWrap.classList.toggle('open');
+    });
+    document.addEventListener('click', () => downloadMenuWrap.classList.remove('open'));
+  }
 
   if (measureToolBtn) {
     measureToolBtn.addEventListener('click', () => {
@@ -748,10 +767,10 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnToggleMesh) {
     btnToggleMesh.addEventListener('click', async () => {
       if (!state.viewer) return;
-      const isMesh = await state.viewer.toggleMeshMode(state.currentJobId);
-      btnToggleMesh.classList.toggle('active', isMesh);
+      const isPoints = await state.viewer.toggleMeshMode(state.currentJobId);
+      btnToggleMesh.classList.toggle('active', isPoints);
       if (meshStyleLabel) {
-        meshStyleLabel.textContent = isMesh ? 'Solid' : 'Points';
+        meshStyleLabel.textContent = isPoints ? 'Points' : 'Solid';
       }
     });
   }

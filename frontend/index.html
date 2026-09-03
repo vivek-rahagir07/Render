@@ -675,22 +675,6 @@
             </div>
 
             <div class="viewer-actions">
-
-              <div class="format-toggle-group" id="format-toggle-group">
-                <button type="button" id="view-glb-btn" class="btn btn-sm btn-toggle-format active">GLB</button>
-                <button type="button" id="view-ply-btn" class="btn btn-sm btn-toggle-format">PLY</button>
-              </div>
-
-              <div class="precision-select-group" id="precision-select-group">
-                <select id="precision-filter-select" class="precision-select" title="Precision & Denoising Filter Level">
-                  <option value="scene.glb" selected>✨ Pristine (Clean)</option>
-                  <option value="scene_ultra.glb">🎯 Ultra Precision (4.5x)</option>
-                  <option value="scene_clean.glb">💎 High Precision (3.5x)</option>
-                  <option value="scene_balanced.glb">⚖️ Balanced (2.5x)</option>
-                  <option value="scene_dense.glb">🌐 Dense Full Scene</option>
-                </select>
-              </div>
-
               <div class="model-select-group" id="demo-model-select-group">
                 <select id="demo-model-select" class="precision-select" title="Switch 3D Scene / Mission">
                   <option value="/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb" selected>🚁 Tactical UAV Alpha</option>
@@ -699,54 +683,21 @@
                 </select>
               </div>
 
-              <button type="button" id="measure-tool-btn" class="btn btn-hud-action btn-sm" title="Measure Distance & Elevation in 3D">
-                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M2 12h20M2 12l5-5M2 12l5 5M22 12l-5-5M22 12l-5 5"></path>
-                </svg>
-                <span id="measure-btn-text">Ruler</span>
-              </button>
-
-              <button type="button" id="snapshot-btn" class="btn btn-hud-action btn-sm" title="Capture High-Res Snapshot">
-                <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                  <circle cx="12" cy="13" r="4"></circle>
-                </svg>
-                <span>Snap</span>
-              </button>
-
-              <div class="btn-download-group">
-                <button type="button" id="download-glb-btn" class="btn btn-primary btn-sm" title="Download 3D GLB Model">
+              <div class="download-menu-wrap">
+                <button type="button" id="download-menu-btn" class="btn btn-hud-action btn-sm" title="Download 3D Model">
                   <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
                     <polyline points="7 10 12 15 17 10"></polyline>
                     <line x1="12" y1="15" x2="12" y2="3"></line>
                   </svg>
-                  <span>GLB</span>
+                  <span>Export</span>
                 </button>
-                <button type="button" id="download-stl-btn" class="btn btn-hud-action btn-sm" title="Download Watertight STL for 3D Printing (Cura / Bambu / Prusa)">
-                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                    <polyline points="2 17 12 22 22 17"></polyline>
-                    <polyline points="2 12 12 17 22 12"></polyline>
-                  </svg>
-                  <span>STL</span>
-                </button>
-                <button type="button" id="download-obj-btn" class="btn btn-hud-action btn-sm" title="Download Wavefront OBJ for CAD & Blender">
-                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
-                    <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
-                    <line x1="12" y1="22.08" x2="12" y2="12"></line>
-                  </svg>
-                  <span>OBJ</span>
-                </button>
-                <button type="button" id="download-ply-btn" class="btn btn-hud-action btn-sm" title="Download Dense PLY Point Cloud">
-                  <svg class="btn-icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                    <polyline points="7 10 12 15 17 10"></polyline>
-                    <line x1="12" y1="15" x2="12" y2="3"></line>
-                  </svg>
-                  <span>PLY</span>
-                </button>
+                <div class="download-dropdown" id="download-dropdown">
+                  <button type="button" id="download-glb-btn" class="download-opt">GLB <span class="dl-hint">Blender / Unity</span></button>
+                  <button type="button" id="download-stl-btn" class="download-opt">STL <span class="dl-hint">3D Printing</span></button>
+                  <button type="button" id="download-obj-btn" class="download-opt">OBJ <span class="dl-hint">CAD / Blender</span></button>
+                  <button type="button" id="download-ply-btn" class="download-opt">PLY <span class="dl-hint">Point Cloud</span></button>
+                </div>
               </div>
 
               <button type="button" id="new-recon-btn" class="btn btn-outline btn-sm">
@@ -754,7 +705,7 @@
                   <line x1="12" y1="5" x2="12" y2="19"></line>
                   <line x1="5" y1="12" x2="19" y2="12"></line>
                 </svg>
-                <span>New Mission</span>
+                <span>New</span>
               </button>
             </div>
           </div>
@@ -762,9 +713,8 @@
           <div id="measure-readout-hud" class="measure-readout-hud hidden">
             <div class="measure-badge">
               <span class="measure-dot"></span>
-              <span>3D Metric Distance: <strong id="measure-dist-val">0.00 m</strong></span>
+              <span>Distance: <strong id="measure-dist-val">0.00 m</strong></span>
             </div>
-            <span class="measure-sub" id="measure-hint-text">Click 2 points on terrain or structure to measure</span>
           </div>
 
           <div id="live-pipeline-hud" class="live-pipeline-hud hidden">
@@ -776,7 +726,7 @@
                 </div>
                 <span id="hud-timer" class="hud-timer">00:00</span>
               </div>
-              <p id="hud-stage-desc" class="hud-desc">Analyzing 3D camera angles & feature matches in real-time...</p>
+              <p id="hud-stage-desc" class="hud-desc">Analyzing 3D camera angles & feature matches...</p>
 
               <div class="hud-progress-bar-bg">
                 <div id="hud-progress-fill" class="hud-progress-fill" style="width: 10%;"></div>
@@ -788,7 +738,7 @@
                     <polyline points="4 17 10 11 4 5"></polyline>
                     <line x1="12" y1="19" x2="20" y2="19"></line>
                   </svg>
-                  <span>Console Logs</span>
+                  <span>Logs</span>
                 </button>
                 <button type="button" id="hud-cancel-btn" class="btn btn-danger btn-sm">Cancel</button>
               </div>
@@ -806,7 +756,7 @@
           </div>
 
           <div class="viewer-dock">
-            <button type="button" id="btn-reset-cam" class="dock-btn" title="Reset Camera View">
+            <button type="button" id="btn-reset-cam" class="dock-btn" title="Reset Camera">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
                 <path d="M3 3v5h5"></path>
@@ -814,7 +764,7 @@
               <span>Reset</span>
             </button>
 
-            <button type="button" id="btn-auto-rotate" class="dock-btn" title="Toggle 360° Auto-Orbit">
+            <button type="button" id="btn-auto-rotate" class="dock-btn" title="Auto Orbit">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="23 4 23 10 17 10"></polyline>
                 <polyline points="1 20 1 14 7 14"></polyline>
@@ -823,81 +773,24 @@
               <span>Orbit</span>
             </button>
 
-            <button type="button" id="btn-toggle-grid" class="dock-btn active" title="Toggle Ground Grid">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="3" y1="9" x2="21" y2="9"></line>
-                <line x1="3" y1="15" x2="21" y2="15"></line>
-                <line x1="9" y1="3" x2="9" y2="21"></line>
-                <line x1="15" y1="3" x2="15" y2="21"></line>
-              </svg>
-              <span>Grid</span>
-            </button>
-
-            <button type="button" id="btn-point-style" class="dock-btn active" title="Toggle Gaussian Circular Splats vs Crisp Points">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <circle cx="12" cy="12" r="4"></circle>
-              </svg>
-              <span id="point-style-label">Splats</span>
-            </button>
-
-            <button type="button" id="btn-toggle-mesh" class="dock-btn" title="Toggle Watertight Surface Mesh vs Point Cloud">
+            <button type="button" id="btn-toggle-mesh" class="dock-btn" title="Toggle Point Cloud / Solid Mesh">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
                 <polyline points="2 17 12 22 22 17"></polyline>
                 <polyline points="2 12 12 17 22 12"></polyline>
               </svg>
-              <span id="mesh-style-label">Mesh</span>
+              <span id="mesh-style-label">Solid</span>
             </button>
 
-            <button type="button" id="btn-toggle-bg" class="dock-btn" title="Cycle Atmosphere Theme">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="5"></circle>
-                <line x1="12" y1="1" x2="12" y2="3"></line>
-                <line x1="12" y1="21" x2="12" y2="23"></line>
-                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                <line x1="1" y1="12" x2="3" y2="12"></line>
-                <line x1="21" y1="12" x2="23" y2="12"></line>
-                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
-              </svg>
-              <span>Atmosphere</span>
-            </button>
-
-            <button type="button" id="btn-toggle-cams" class="dock-btn" title="Toggle Drone Camera Frustums">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                <circle cx="12" cy="13" r="4"></circle>
-              </svg>
-              <span>Cameras</span>
-            </button>
-
-            <button type="button" id="btn-fullscreen" class="dock-btn" title="Toggle Fullscreen Viewport">
+            <button type="button" id="btn-fullscreen" class="dock-btn" title="Fullscreen">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="15 3 21 3 21 9"></polyline>
                 <polyline points="9 21 3 21 3 15"></polyline>
                 <line x1="21" y1="3" x2="14" y2="10"></line>
                 <line x1="3" y1="21" x2="10" y2="14"></line>
               </svg>
-              <span>Fullscreen</span>
+              <span>Full</span>
             </button>
-
-            <div class="dock-divider"></div>
-
-            <div class="dock-slider-group">
-              <span class="dock-label">Density: <span id="point-size-val">1.0x</span></span>
-              <input type="range" id="point-size-slider" min="0.2" max="3.0" step="0.1" value="1.0" class="dock-slider" title="Point Size Multiplier">
-            </div>
-          </div>
-
-          <div class="viewer-hints">
-            <span class="hint-item"><span class="hint-kbd">L-Click</span> Orbit</span>
-            <span class="hint-sep">/</span>
-            <span class="hint-item"><span class="hint-kbd">R-Click</span> Pan</span>
-            <span class="hint-sep">/</span>
-            <span class="hint-item"><span class="hint-kbd">Scroll</span> Zoom</span>
           </div>
         </div>
       </section>

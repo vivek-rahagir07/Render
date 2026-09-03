@@ -1990,33 +1990,77 @@ body[data-theme="light"] .icon-moon { display: block; }
 }
 
 .btn-download-group {
+  display: none;
+}
+
+.download-menu-wrap {
+  position: relative;
+}
+
+.download-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(10, 14, 26, 0.96);
+  backdrop-filter: blur(24px);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: 6px;
+  min-width: 180px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.7), 0 0 20px var(--ai-glow-soft);
+  z-index: 100;
+  animation: fadeIn 0.15s ease;
+}
+
+.download-menu-wrap:hover .download-dropdown,
+.download-menu-wrap.open .download-dropdown {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.download-opt {
   display: flex;
   align-items: center;
-  gap: 6px;
-  background: var(--bg-surface-glass);
-  padding: 3px 4px;
+  justify-content: space-between;
+  padding: 9px 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-subtle);
+  background: transparent;
+  border: none;
+  color: var(--text-main);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  text-align: left;
+  width: 100%;
 }
 
-#download-stl-btn:hover {
-  border-color: #F6C453;
-  color: #F6C453;
-  box-shadow: 0 0 14px rgba(246, 196, 83, 0.35);
+.download-opt:hover {
+  background: rgba(0, 229, 255, 0.1);
+  color: var(--color-cyan);
 }
 
-#download-obj-btn:hover {
-  border-color: #A78BFA;
-  color: #A78BFA;
-  box-shadow: 0 0 14px rgba(167, 139, 250, 0.35);
+.dl-hint {
+  font-size: 0.68rem;
+  font-weight: 400;
+  color: var(--text-muted);
+  letter-spacing: 0;
+}
+
+.download-opt:hover .dl-hint {
+  color: rgba(0, 229, 255, 0.6);
 }
 
 #btn-toggle-mesh.active {
-  background: linear-gradient(135deg, rgba(246, 196, 83, 0.25) 0%, rgba(233, 169, 47, 0.1) 100%);
-  border-color: #F6C453;
-  color: #F6C453;
-  box-shadow: 0 0 16px rgba(246, 196, 83, 0.35);
+  background: linear-gradient(135deg, rgba(0, 229, 255, 0.2) 0%, rgba(77, 124, 254, 0.08) 100%);
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  box-shadow: 0 0 16px var(--ai-glow-soft);
 }
+
 
 .measure-readout-hud {
   position: absolute;
