@@ -20,13 +20,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const statusPillText = document.getElementById('status-pill-text');
 
   // Views
+  const homeSection = document.getElementById('home-section');
   const uploadSection = document.getElementById('upload-section');
   const viewerSection = document.getElementById('viewer-section');
 
   // Nav & Header Elements
+  const navBtnHome = document.getElementById('nav-btn-home');
   const navBtnCreate = document.getElementById('nav-btn-create');
   const navBtnViewer = document.getElementById('nav-btn-viewer');
   const brandHomeLink = document.getElementById('brand-home-link');
+
+  // Landing CTAs & Showcase Elements
+  const heroBtnExplore = document.getElementById('hero-btn-explore');
+  const heroBtnUpload = document.getElementById('hero-btn-upload');
+  const bottomBtnUpload = document.getElementById('bottom-btn-upload');
+  const bottomBtnExplore = document.getElementById('bottom-btn-explore');
+  const backToHomeBtn = document.getElementById('back-to-home-btn');
+  const demoModelSelect = document.getElementById('demo-model-select');
 
   // Theme Switcher
   const themeToggleBtn = document.getElementById('theme-toggle-btn');
@@ -501,40 +511,105 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // --- View Routing System ---
   function showView(viewId) {
-    [uploadSection, viewerSection].forEach(section => {
+    [homeSection, uploadSection, viewerSection].forEach(section => {
       if (section) section.classList.remove('active');
     });
     const target = document.getElementById(viewId);
     if (target) target.classList.add('active');
 
-    if (navBtnCreate && navBtnViewer) {
-      if (viewId === 'viewer-section') {
-        navBtnCreate.classList.remove('active');
-        navBtnViewer.classList.add('active');
-        navBtnViewer.disabled = false;
-      } else {
-        navBtnCreate.classList.add('active');
-        navBtnViewer.classList.remove('active');
-      }
+    // Update Nav Pills
+    if (navBtnHome) navBtnHome.classList.toggle('active', viewId === 'home-section');
+    if (navBtnCreate) navBtnCreate.classList.toggle('active', viewId === 'upload-section');
+    if (navBtnViewer) navBtnViewer.classList.toggle('active', viewId === 'viewer-section');
+
+    if (viewId === 'viewer-section' && state.viewer) {
+      setTimeout(() => state.viewer.onResize(), 60);
     }
   }
 
+  // --- Interactive Demo 3D Model Loader ---
+  const DEFAULT_DEMO_MODEL = '/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb';
+
+  async function loadDemoModel(modelUrl, title = 'Tactical UAV Survey Alpha', badgeText = 'UAV Flight Stream • 16 Keyframes') {
+    showView('viewer-section');
+    if (viewerHeaderTitle) viewerHeaderTitle.textContent = title;
+    const statsBadge = document.getElementById('viewer-stats-badge');
+    if (statsBadge && badgeText) statsBadge.textContent = badgeText;
+    if (demoModelSelect) demoModelSelect.value = modelUrl;
+
+    try {
+      await state.viewer.loadModel(modelUrl, null, 'glb');
+    } catch (err) {
+      console.warn('Failed to load demo model:', err);
+    }
+  }
+
+  // Nav Links
+  if (navBtnHome) {
+    navBtnHome.addEventListener('click', () => showView('home-section'));
+  }
   if (navBtnCreate) {
     navBtnCreate.addEventListener('click', () => showView('upload-section'));
   }
   if (navBtnViewer) {
     navBtnViewer.addEventListener('click', () => {
-      if (!navBtnViewer.disabled) {
-        showView('viewer-section');
-        state.viewer.onResize();
+      showView('viewer-section');
+      if (!state.viewer.currentModel) {
+        loadDemoModel(DEFAULT_DEMO_MODEL, 'Tactical UAV Survey Alpha', 'UAV Flight Stream • 16 Keyframes');
       }
     });
   }
   if (brandHomeLink) {
     brandHomeLink.addEventListener('click', (e) => {
       e.preventDefault();
-      showView('upload-section');
+      showView('home-section');
+    });
+  }
+  if (backToHomeBtn) {
+    backToHomeBtn.addEventListener('click', () => showView('home-section'));
+  }
+
+  // Landing Page Hero & Action Buttons
+  if (heroBtnExplore) {
+    heroBtnExplore.addEventListener('click', () => {
+      loadDemoModel(DEFAULT_DEMO_MODEL, 'Tactical UAV Survey Alpha', 'UAV Flight Stream • 16 Keyframes');
+    });
+  }
+  if (heroBtnUpload) {
+    heroBtnUpload.addEventListener('click', () => showView('upload-section'));
+  }
+  if (bottomBtnUpload) {
+    bottomBtnUpload.addEventListener('click', () => showView('upload-section'));
+  }
+  if (bottomBtnExplore) {
+    bottomBtnExplore.addEventListener('click', () => {
+      loadDemoModel(DEFAULT_DEMO_MODEL, 'Tactical UAV Survey Alpha', 'UAV Flight Stream • 16 Keyframes');
+    });
+  }
+
+  // Showcase Demo Cards Click Handlers
+  document.querySelectorAll('.showcase-card').forEach(card => {
+    card.addEventListener('click', (e) => {
+      const modelUrl = card.dataset.model;
+      const title = card.dataset.title || 'Geospatial 3D Model';
+      const badge = card.dataset.badge || 'Calibrated UAV Stream';
+      if (modelUrl) {
+        loadDemoModel(modelUrl, title, badge);
+      }
+    });
+  });
+
+  // Viewport Demo Model Selector Dropdown
+  if (demoModelSelect) {
+    demoModelSelect.addEventListener('change', (e) => {
+      const selectedUrl = e.target.value;
+      const selectedOption = e.target.options[e.target.selectedIndex];
+      const title = selectedOption ? selectedOption.text : '3D Reconstruction';
+      if (selectedUrl) {
+        loadDemoModel(selectedUrl, title, 'Calibrated UAV Stream');
+      }
     });
   }
 

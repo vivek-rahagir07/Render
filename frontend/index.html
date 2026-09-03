@@ -45,19 +45,26 @@
 
       <div class="header-center">
         <nav class="nav-pills">
-          <button type="button" id="nav-btn-create" class="nav-pill active">
+          <button type="button" id="nav-btn-home" class="nav-pill active">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              <polyline points="9 22 9 12 15 12 15 22"></polyline>
             </svg>
-            <span>Mission Setup</span>
+            <span>Overview</span>
           </button>
-          <button type="button" id="nav-btn-viewer" class="nav-pill" disabled>
+          <button type="button" id="nav-btn-viewer" class="nav-pill">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
               <polyline points="2 17 12 22 22 17"></polyline>
               <polyline points="2 12 12 17 22 12"></polyline>
             </svg>
-            <span>3D Geospatial Viewport</span>
+            <span>3D Viewport</span>
+          </button>
+          <button type="button" id="nav-btn-create" class="nav-pill">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+            </svg>
+            <span>Mission Setup</span>
           </button>
         </nav>
       </div>
@@ -92,8 +99,293 @@
     <!-- Main Content Area -->
     <main class="main-content">
       
+      <!-- STEP 0: Landing Hub & 3D Model Showcase Section -->
+      <section id="home-section" class="view-panel active">
+        <!-- Hero Cockpit -->
+        <div class="landing-hero">
+          <div class="hero-badge">
+            <span class="live-dot-beacon"></span>
+            <span>Single-Pass Drone Reconnaissance • Neural 3D Photogrammetry</span>
+          </div>
+          <h1 class="landing-title">
+            Autonomous Drone Video to <span class="hero-gradient">Metrically Accurate 3D</span>
+          </h1>
+          <p class="landing-subtitle">
+            Ingest single-pass UAV flight footage to synthesize dense point clouds, photorealistic PBR meshes, and georeferenced spatial twins with millimeter fidelity.
+          </p>
+
+          <!-- Primary Call to Actions -->
+          <div class="landing-cta-group">
+            <button type="button" id="hero-btn-explore" class="btn btn-primary btn-xl pulse-glow">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                <polyline points="2 17 12 22 22 17"></polyline>
+                <polyline points="2 12 12 17 22 12"></polyline>
+              </svg>
+              <span>Click to Explore 3D Models</span>
+              <span class="btn-badge-live">LIVE 3D</span>
+            </button>
+            <button type="button" id="hero-btn-upload" class="btn btn-secondary btn-xl">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                <polyline points="17 8 12 3 7 8"></polyline>
+                <line x1="12" y1="3" x2="12" y2="15"></line>
+              </svg>
+              <span>Launch Recon Mission (Upload)</span>
+            </button>
+          </div>
+
+          <!-- Rapid Telemetry Status Bar -->
+          <div class="telemetry-bar landing-telemetry">
+            <div class="telemetry-item">
+              <span class="telemetry-label">Metric Precision</span>
+              <span class="telemetry-value highlight-cyan-blue">&lt; 1.2 cm GSD Scale</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-label">Trajectory Ingestion</span>
+              <span class="telemetry-value">Single Linear UAV Pass</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-label">Neural Engine</span>
+              <span class="telemetry-value">MUSt3R Dense Regressor</span>
+            </div>
+            <div class="telemetry-item">
+              <span class="telemetry-label">Hardware Inference</span>
+              <span class="telemetry-value">Apple Silicon Metal (MPS)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 1: Interactive 3D Demo Showcase Gallery -->
+        <div class="showcase-section">
+          <div class="section-header">
+            <div class="section-badge">INTERACTIVE DEMOS</div>
+            <h2 class="section-title">Explore Calibrated 3D Missions</h2>
+            <p class="section-subtitle">Click any mission below to orbit, pan, inspect dense Gaussian splats, and test real-world 3D metric measurements directly in the viewport.</p>
+          </div>
+
+          <div class="showcase-grid">
+            <!-- Card 1 (Featured) -->
+            <div class="showcase-card featured" data-model="/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb" data-title="Tactical UAV Survey Alpha" data-badge="UAV Flight Stream • 16 Keyframes">
+              <div class="card-thumb-wrap">
+                <img src="/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/images/drone_frame_001.jpg" alt="Tactical UAV Survey Alpha" class="showcase-img" loading="lazy">
+                <div class="thumb-badge">Featured Scan</div>
+                <div class="thumb-overlay">
+                  <div class="play-orbit-orb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                      <polyline points="2 17 12 22 22 17"></polyline>
+                      <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="card-header-row">
+                  <h3 class="card-title">Tactical UAV Survey Alpha</h3>
+                  <span class="card-status-pill">Calibrated</span>
+                </div>
+                <p class="card-desc">Dense neural photogrammetry reconstruction from a linear low-altitude UAV flight pass with automatic parallax tracking.</p>
+                <div class="card-tags">
+                  <span class="spec-tag">16 Keyframes</span>
+                  <span class="spec-tag">5.5 MB GLB</span>
+                  <span class="spec-tag">Clean Splats</span>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm showcase-launch-btn">
+                  <span>Explore in 3D Viewport</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-arrow-icon">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 2 -->
+            <div class="showcase-card" data-model="/storage/jobs/1871f0ea-0247-4629-9670-d794e8b28980/outputs/scene.glb" data-title="Infrastructure & Facade Mapping" data-badge="Building Facade • Metric Scale">
+              <div class="card-thumb-wrap">
+                <img src="/storage/jobs/1871f0ea-0247-4629-9670-d794e8b28980/images/Screenshot_2026-08-31_at_10.40.41_AM.png" alt="Infrastructure Mapping" class="showcase-img" loading="lazy">
+                <div class="thumb-badge">Structural</div>
+                <div class="thumb-overlay">
+                  <div class="play-orbit-orb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                      <polyline points="2 17 12 22 22 17"></polyline>
+                      <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="card-header-row">
+                  <h3 class="card-title">Infrastructure & Facades</h3>
+                  <span class="card-status-pill">Metric</span>
+                </div>
+                <p class="card-desc">Sub-centimeter structural point cloud capturing building facades, geometry, and metric vertical elevation profiles.</p>
+                <div class="card-tags">
+                  <span class="spec-tag">Multi-Angle Scan</span>
+                  <span class="spec-tag">17 MB PBR</span>
+                  <span class="spec-tag">Ruler Ready</span>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm showcase-launch-btn">
+                  <span>Explore in 3D Viewport</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-arrow-icon">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Card 3 -->
+            <div class="showcase-card" data-model="/storage/jobs/897771e6-d3e4-41f8-a064-798a974e470c/outputs/scene.glb" data-title="Aerial Terrain & Topography" data-badge="Terrain Elevation • Gaussian Splats">
+              <div class="card-thumb-wrap">
+                <img src="/storage/jobs/897771e6-d3e4-41f8-a064-798a974e470c/images/drone_frame_001.jpg" alt="Aerial Terrain" class="showcase-img" loading="lazy">
+                <div class="thumb-badge">Topography</div>
+                <div class="thumb-overlay">
+                  <div class="play-orbit-orb">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                      <polyline points="2 17 12 22 22 17"></polyline>
+                      <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="card-content">
+                <div class="card-header-row">
+                  <h3 class="card-title">Aerial Terrain & Elevation</h3>
+                  <span class="card-status-pill">Dense Cloud</span>
+                </div>
+                <p class="card-desc">Comprehensive surface elevation reconstruction with global pose bundle adjustment and smooth Gaussian splats.</p>
+                <div class="card-tags">
+                  <span class="spec-tag">Terrain Elevation</span>
+                  <span class="spec-tag">5.5 MB GLB</span>
+                  <span class="spec-tag">PLY Point Cloud</span>
+                </div>
+                <button type="button" class="btn btn-primary btn-sm showcase-launch-btn">
+                  <span>Explore in 3D Viewport</span>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="btn-arrow-icon">
+                    <line x1="5" y1="12" x2="19" y2="12"></line>
+                    <polyline points="12 5 19 12 12 19"></polyline>
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 2: Core Capabilities Grid -->
+        <div class="capabilities-section">
+          <div class="section-header">
+            <div class="section-badge">TACTICAL SUITE</div>
+            <h2 class="section-title">Engineered for Rapid Aerial Reconnaissance</h2>
+            <p class="section-subtitle">Single-pass capture to millimeter digital twin without ground control points or complicated flight plans.</p>
+          </div>
+
+          <div class="capabilities-grid">
+            <div class="capability-card">
+              <div class="cap-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M23 7l-7 5 7 5V7z"></path>
+                  <rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect>
+                </svg>
+              </div>
+              <h3 class="cap-title">Single-Pass Video Ingestion</h3>
+              <p class="cap-desc">Simply upload continuous drone footage (.MP4 / .MOV). Client AI automatically filters high-speed motion blur and extracts optimal parallax keyframes.</p>
+            </div>
+
+            <div class="capability-card">
+              <div class="cap-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M2 12h20M2 12l5-5M2 12l5 5M22 12l-5-5M22 12l-5 5"></path>
+                </svg>
+              </div>
+              <h3 class="cap-title">3D Metric Ruler Tool</h3>
+              <p class="cap-desc">Click any two points in the 3D canvas on roofs, roads, or terrain to measure real-world distances and elevation changes with calibrated scale.</p>
+            </div>
+
+            <div class="capability-card">
+              <div class="cap-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                </svg>
+              </div>
+              <h3 class="cap-title">AI Subject Isolation</h3>
+              <p class="cap-desc">Optional deep neural background masking filters sky and distant moving clutter, allocating 100% of point cloud density to the subject.</p>
+            </div>
+
+            <div class="capability-card">
+              <div class="cap-icon-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+                </svg>
+              </div>
+              <h3 class="cap-title">Apple Silicon Metal MPS</h3>
+              <p class="cap-desc">Local GPU acceleration on Apple unified memory ensures ultra-fast convergence, zero cloud latency, and 100% private reconnaissance data.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section 3: 3-Step Workflow -->
+        <div class="workflow-section">
+          <div class="section-header">
+            <div class="section-badge">PIPELINE</div>
+            <h2 class="section-title">How Render 3D Works</h2>
+          </div>
+
+          <div class="workflow-steps">
+            <div class="workflow-step">
+              <div class="step-num">01</div>
+              <h4 class="step-title">Ingest Drone Pass</h4>
+              <p class="step-desc">Fly a linear or orbital path with any drone. Drop the video or aerial photos into the setup studio.</p>
+            </div>
+            <div class="workflow-connector">➔</div>
+            <div class="workflow-step">
+              <div class="step-num">02</div>
+              <h4 class="step-title">Neural Reconstruction</h4>
+              <p class="step-desc">MUSt3R regressors solve camera intrinsics, trajectory splines, and dense point matching in seconds.</p>
+            </div>
+            <div class="workflow-connector">➔</div>
+            <div class="workflow-step">
+              <div class="step-num">03</div>
+              <h4 class="step-title">Inspect & Measure</h4>
+              <p class="step-desc">Freely orbit the 3D twin, measure metric dimensions, toggle splat densities, and export GLB/PLY.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Action Strip -->
+        <div class="landing-bottom-cta">
+          <div class="bottom-cta-content">
+            <h3 class="bottom-cta-title">Ready to build your first 3D spatial twin?</h3>
+            <p class="bottom-cta-desc">Launch a new mission with your UAV footage or explore preloaded sample models immediately.</p>
+          </div>
+          <div class="bottom-cta-actions">
+            <button type="button" id="bottom-btn-upload" class="btn btn-primary btn-lg">
+              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+              </svg>
+              <span>Launch Recon Mission</span>
+            </button>
+            <button type="button" id="bottom-btn-explore" class="btn btn-secondary btn-lg">
+              <span>Open 3D Viewport</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
       <!-- STEP 1: Mission Setup & Upload Section -->
-      <section id="upload-section" class="view-panel active">
+      <section id="upload-section" class="view-panel">
+        <div class="section-nav-bar">
+          <button type="button" id="back-to-home-btn" class="btn-back-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"></line>
+              <polyline points="12 19 5 12 12 5"></polyline>
+            </svg>
+            <span>Back to Overview</span>
+          </button>
+        </div>
         
         <!-- Compact Hero Header -->
         <div class="hero-cockpit">
@@ -338,6 +630,15 @@
                   <option value="scene_clean.glb">💎 High Precision (3.5x)</option>
                   <option value="scene_balanced.glb">⚖️ Balanced (2.5x)</option>
                   <option value="scene_dense.glb">🌐 Dense Full Scene</option>
+                </select>
+              </div>
+
+              <!-- Quick Model Explorer Switcher -->
+              <div class="model-select-group" id="demo-model-select-group">
+                <select id="demo-model-select" class="precision-select" title="Switch 3D Scene / Mission">
+                  <option value="/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb" selected>🚁 Tactical UAV Alpha</option>
+                  <option value="/storage/jobs/1871f0ea-0247-4629-9670-d794e8b28980/outputs/scene.glb">🏢 Infrastructure Facade</option>
+                  <option value="/storage/jobs/897771e6-d3e4-41f8-a064-798a974e470c/outputs/scene.glb">⛰️ Aerial Terrain Twin</option>
                 </select>
               </div>
 
