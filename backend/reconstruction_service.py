@@ -123,7 +123,7 @@ class ReconstructionService:
         self.jobs: Dict[str, JobInfo] = {}
         self.active_processes: Dict[str, subprocess.Popen] = {}
         self._lock = threading.Lock()
-        self._queue: asyncio.Queue = asyncio.Queue()
+        self._queue: Optional[asyncio.Queue] = None   # lazily created inside the running loop
         self._worker_task: Optional[asyncio.Task] = None
 
         self.preprocessing_hooks: List[BasePreprocessingHook] = []
@@ -740,18 +740,35 @@ sys.exit(0)
 
     async def submit_job(self, job_id: str):
         """Asynchronously queues the job for background execution."""
+        if self._queue is None:
+            self._queue = asyncio.Queue()
         await self._queue.put(job_id)
 
     async def start_worker(self):
-        """Background worker consuming jobs from the queue."""
+        """Background worker consuming jobs from the queue.
+
+        Creates the asyncio.Queue lazily inside the running event loop to avoid
+        'Future attached to a different loop' errors that occur when the queue
+        is created at import/init time before uvicorn starts the loop.
+        """
+        if self._queue is None:
+            self._queue = asyncio.Queue()
+
         logger.info("Starting background reconstruction worker...")
         while True:
             try:
                 job_id = await self._queue.get()
                 logger.info(f"Worker picked up job {job_id}")
-                await asyncio.to_thread(self._run_reconstruction_sync, job_id)
-                self._queue.task_done()
+                try:
+                    await asyncio.to_thread(self._run_reconstruction_sync, job_id)
+                except Exception as e:
+                    logger.error(f"Worker job exception for {job_id}: {e}", exc_info=True)
+                finally:
+                    self._queue.task_done()
             except asyncio.CancelledError:
+                logger.info("Reconstruction worker cancelled — shutting down cleanly.")
                 break
             except Exception as e:
-                logger.error(f"Worker exception: {e}", exc_info=True)
+                logger.error(f"Worker outer exception: {e}", exc_info=True)
+                # Brief pause to avoid busy-looping on repeated errors
+                await asyncio.sleep(0.5)

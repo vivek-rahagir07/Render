@@ -215,10 +215,13 @@ document.addEventListener('DOMContentLoaded', () => {
     video.src = videoUrl;
     video.muted = true;
     video.playsInline = true;
+    video.preload = 'auto';
 
-    await new Promise((resolve) => {
-      video.onloadedmetadata = () => resolve();
-    });
+    // Wait for metadata with a 10-second timeout guard
+    await Promise.race([
+      new Promise((resolve) => { video.onloadedmetadata = () => resolve(); }),
+      new Promise((resolve) => setTimeout(resolve, 10000))
+    ]);
 
     const duration = video.duration || 10;
     const targetKeyframeCount = Math.min(30, Math.max(16, Math.floor(duration * 1.5)));
@@ -233,17 +236,27 @@ document.addEventListener('DOMContentLoaded', () => {
 
     for (let i = 0; i < targetKeyframeCount; i++) {
       const targetTime = i * interval;
-      video.currentTime = targetTime;
 
-      await new Promise(resolve => {
-        video.onseeked = () => resolve();
-      });
+      // Seek and wait — race against 3 s timeout so a missed event never stalls the loop
+      video.currentTime = targetTime;
+      await Promise.race([
+        new Promise((resolve) => { video.onseeked = () => resolve(); }),
+        new Promise((resolve) => setTimeout(resolve, 3000))
+      ]);
+      video.onseeked = null;
 
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
-      const frameFile = new File([blob], `drone_frame_${String(i + 1).padStart(3, '0')}.jpg`, { type: 'image/jpeg' });
-      extractedBlobs.push(frameFile);
+      // toBlob with a 5-second fallback (guard against rare browser stalls)
+      const blob = await Promise.race([
+        new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.92)),
+        new Promise((resolve) => setTimeout(() => resolve(null), 5000))
+      ]);
+
+      if (blob) {
+        const frameFile = new File([blob], `drone_frame_${String(i + 1).padStart(3, '0')}.jpg`, { type: 'image/jpeg' });
+        extractedBlobs.push(frameFile);
+      }
 
       const pct = Math.round(((i + 1) / targetKeyframeCount) * 100);
       extractProgressFill.style.width = `${pct}%`;
