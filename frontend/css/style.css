@@ -896,260 +896,40 @@ body[data-theme="light"] .icon-moon { display: block; }
 }
 
 /* ==========================================================================
-   PROBLEM STATEMENT & MISSION IMPERATIVE
+   TACTICAL SUITE CAPABILITIES
    ========================================================================== */
-.problem-statement-section,
-.input-matrix-section,
-.challenges-section,
-.evaluation-section,
-.applications-section {
-  max-width: 1240px;
-  margin: 0 auto 72px;
-  padding: 0 24px;
+.capabilities-section,
+.applications-section,
+.workflow-section {
+  max-width: 1200px;
+  margin: 0 auto 64px;
+  padding: 0 20px;
 }
 
-/* Comparison Grid: Traditional vs AEROVOX */
-.comparison-grid {
+.capabilities-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 28px;
-  margin-bottom: 36px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
 }
 
-.comparison-card {
+.capability-card {
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  position: relative;
-  transition: all 0.3s ease;
-}
-
-.comparison-card.traditional {
-  border-color: rgba(239, 68, 68, 0.25);
-  background: linear-gradient(180deg, rgba(239, 68, 68, 0.04) 0%, rgba(13, 17, 25, 0.85) 100%);
-}
-
-.comparison-card.aerovox-solution {
-  border-color: rgba(0, 229, 255, 0.4);
-  background: linear-gradient(180deg, rgba(0, 229, 255, 0.07) 0%, rgba(13, 17, 25, 0.95) 100%);
-  box-shadow: 0 12px 40px rgba(0, 229, 255, 0.12);
-}
-
-.comparison-card:hover {
-  transform: translateY(-4px);
-}
-
-.comp-badge {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  padding: 4px 10px;
-  border-radius: 999px;
-  display: inline-block;
-  margin-bottom: 14px;
-  background: rgba(239, 68, 68, 0.12);
-  color: #EF4444;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-}
-
-.comp-badge.active-glow {
-  background: rgba(0, 229, 255, 0.14);
-  color: var(--color-cyan);
-  border-color: rgba(0, 229, 255, 0.45);
-  box-shadow: 0 0 16px var(--ai-glow-soft);
-}
-
-.comp-title {
-  font-family: var(--font-display);
-  font-size: 1.35rem;
-  font-weight: 800;
-  color: var(--text-main);
-  margin-bottom: 18px;
-}
-
-.comp-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.comp-list li {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  line-height: 1.5;
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-
-.comp-list li strong {
-  color: var(--text-main);
-}
-
-.comp-list .cross {
-  color: #EF4444;
-  font-weight: 900;
-  flex-shrink: 0;
-}
-
-.comp-list .check {
-  color: var(--color-success);
-  font-weight: 900;
-  flex-shrink: 0;
-}
-
-/* 5 Core Deliverables Strip */
-.deliverables-strip {
-  background: var(--bg-surface);
-  border: 1px solid var(--border-card);
-  border-radius: var(--radius-lg);
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.strip-header {
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  color: var(--color-cyan);
-}
-
-.strip-items {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
-}
-
-.strip-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  padding: 10px 14px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  padding: 24px;
   transition: all 0.25s ease;
 }
 
-.strip-item:hover {
+.capability-card:hover {
   border-color: var(--ai-border);
-  transform: translateY(-2px);
-}
-
-.strip-num {
-  font-family: var(--font-mono);
-  font-size: 0.82rem;
-  font-weight: 800;
-  color: var(--color-cyan);
-}
-
-.strip-text {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-main);
-}
-
-/* ==========================================================================
-   INPUT DATA & INGESTION TELEMETRY MATRIX
-   ========================================================================== */
-.matrix-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 28px;
-}
-
-.matrix-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  padding: 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  transition: all 0.3s ease;
-}
-
-.matrix-card.mandatory {
-  border-color: rgba(0, 229, 255, 0.3);
-}
-
-.matrix-card.optional {
-  border-color: rgba(246, 196, 83, 0.3);
-}
-
-.matrix-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.5);
-}
-
-.matrix-header {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.matrix-pill {
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
-  padding: 3px 10px;
-  border-radius: 999px;
-  align-self: flex-start;
-}
-
-.matrix-pill.required {
-  background: rgba(0, 229, 255, 0.12);
-  color: var(--color-cyan);
-  border: 1px solid rgba(0, 229, 255, 0.35);
-}
-
-.matrix-pill.optional {
-  background: rgba(246, 196, 83, 0.12);
-  color: var(--color-amber);
-  border: 1px solid rgba(246, 196, 83, 0.35);
-}
-
-.matrix-title {
-  font-family: var(--font-display);
-  font-size: 1.25rem;
-  font-weight: 800;
-  color: var(--text-main);
-}
-
-.matrix-items {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.matrix-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 14px;
-  padding: 14px;
   background: var(--bg-surface);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  transition: all 0.2s ease;
+  box-shadow: 0 10px 30px rgba(0, 229, 255, 0.1);
 }
 
-.matrix-item:hover {
-  border-color: var(--ai-border-subtle);
-  transform: translateX(3px);
-}
-
-.item-icon-orb {
-  width: 38px;
-  height: 38px;
+.cap-icon-box {
+  width: 44px;
+  height: 44px;
   border-radius: var(--radius-sm);
   background: linear-gradient(135deg, rgba(0, 229, 255, 0.15) 0%, rgba(77, 124, 254, 0.08) 100%);
   border: 1px solid var(--border-card);
@@ -1157,174 +937,26 @@ body[data-theme="light"] .icon-moon { display: block; }
   align-items: center;
   justify-content: center;
   color: var(--color-cyan);
-  flex-shrink: 0;
+  margin-bottom: 16px;
 }
 
-.matrix-card.optional .item-icon-orb {
-  background: linear-gradient(135deg, rgba(246, 196, 83, 0.15) 0%, rgba(233, 169, 47, 0.08) 100%);
-  border-color: rgba(246, 196, 83, 0.3);
-  color: var(--color-amber);
+.cap-icon-box svg {
+  width: 22px;
+  height: 22px;
 }
 
-.item-icon-orb svg {
-  width: 18px;
-  height: 18px;
-}
-
-.item-info {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.item-title {
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 700;
-  color: var(--text-main);
-}
-
-.item-desc {
-  font-size: 0.82rem;
-  color: var(--text-muted);
-  line-height: 1.45;
-}
-
-/* ==========================================================================
-   TECHNICAL CHALLENGES & NEURAL SOLVERS (8 PILLARS)
-   ========================================================================== */
-.challenges-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 20px;
-}
-
-.challenge-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-md);
-  padding: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.challenge-card:hover {
-  border-color: var(--ai-border);
-  transform: translateY(-4px);
-  box-shadow: 0 12px 30px rgba(0, 229, 255, 0.12);
-}
-
-.challenge-num {
-  font-family: var(--font-mono);
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--color-cyan);
-  letter-spacing: 0.08em;
-}
-
-.challenge-title {
+.cap-title {
   font-family: var(--font-display);
   font-size: 1.05rem;
-  font-weight: 800;
+  font-weight: 700;
+  margin-bottom: 8px;
   color: var(--text-main);
 }
 
-.challenge-prob {
-  font-size: 0.82rem;
+.cap-desc {
+  font-size: 0.85rem;
   color: var(--text-muted);
   line-height: 1.5;
-  flex: 1;
-}
-
-.challenge-sol {
-  font-size: 0.82rem;
-  color: var(--color-white);
-  line-height: 1.45;
-  background: rgba(0, 229, 255, 0.07);
-  border: 1px solid rgba(0, 229, 255, 0.2);
-  padding: 8px 10px;
-  border-radius: var(--radius-xs);
-}
-
-.sol-badge {
-  font-family: var(--font-mono);
-  font-size: 0.65rem;
-  font-weight: 800;
-  color: var(--color-cyan);
-  background: rgba(6, 8, 13, 0.8);
-  padding: 2px 6px;
-  border-radius: 3px;
-  margin-right: 6px;
-  letter-spacing: 0.06em;
-}
-
-/* ==========================================================================
-   DESIRED OUTPUT & EVALUATION CRITERIA TABLE
-   ========================================================================== */
-.table-wrapper {
-  overflow-x: auto;
-  border: 1px solid var(--border-subtle);
-  border-radius: var(--radius-lg);
-  background: var(--bg-card);
-  backdrop-filter: blur(12px);
-  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4);
-}
-
-.benchmark-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.88rem;
-}
-
-.benchmark-table th {
-  background: var(--bg-surface);
-  padding: 16px 20px;
-  font-family: var(--font-mono);
-  font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--color-cyan);
-  border-bottom: 1px solid var(--border-subtle);
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.benchmark-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid var(--border-subtle);
-  color: var(--text-muted);
-  vertical-align: middle;
-}
-
-.benchmark-table tbody tr:hover {
-  background: rgba(0, 229, 255, 0.04);
-}
-
-.benchmark-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-.benchmark-table td strong {
-  color: var(--text-main);
-  font-family: var(--font-display);
-  font-weight: 700;
-}
-
-.pill-pass {
-  font-family: var(--font-mono);
-  font-size: 0.74rem;
-  font-weight: 800;
-  color: var(--color-success);
-  background: rgba(32, 211, 162, 0.12);
-  border: 1px solid rgba(32, 211, 162, 0.35);
-  padding: 4px 10px;
-  border-radius: 999px;
-  display: inline-block;
-  white-space: nowrap;
 }
 
 /* ==========================================================================
