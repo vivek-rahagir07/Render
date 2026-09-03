@@ -373,52 +373,240 @@ body[data-theme="light"] .icon-moon { display: block; }
 /* --------------------------------------------------------------------------
    STEP 0: LANDING HUB & 3D MODEL SHOWCASE
    -------------------------------------------------------------------------- */
-.landing-hero {
-  text-align: center;
-  max-width: 960px;
-  margin: 10px auto 44px;
-  padding: 0 16px;
-}
 
-/* Hero Brand Emblem */
-.hero-brand-emblem {
-  position: relative;
-  display: inline-flex;
+/* Hero Split Layout */
+.hero-split {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: 36px;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+  text-align: left;
+}
+
+.hero-left {
+  flex: 1 1 540px;
+  min-width: 0;
+  max-width: 600px;
+}
+
+.hero-right {
+  flex: 0 0 540px;
+  display: flex;
   justify-content: center;
-  margin-bottom: 22px;
-}
-
-.hero-emblem-halo {
-  position: absolute;
-  width: 110%;
-  height: 110%;
-  background: radial-gradient(ellipse at center, rgba(0, 229, 255, 0.28) 0%, rgba(77, 124, 254, 0.14) 45%, transparent 72%);
-  filter: blur(32px);
-  pointer-events: none;
-  z-index: 0;
-}
-
-.hero-logo-img {
+  align-items: center;
   position: relative;
-  z-index: 1;
-  max-width: 320px;
-  width: 72%;
-  height: auto;
-  border-radius: var(--radius-lg);
-  border: 1px solid rgba(0, 229, 255, 0.3);
-  box-shadow: 0 14px 45px rgba(0, 0, 0, 0.7), 0 0 35px rgba(0, 229, 255, 0.25);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
 }
 
-.hero-logo-img:hover {
-  transform: scale(1.025);
-  box-shadow: 0 18px 55px rgba(0, 0, 0, 0.8), 0 0 50px rgba(0, 229, 255, 0.45);
+/* Inline AEROVOX Logo */
+.hero-brand-emblem-inline {
+  margin-bottom: 16px;
 }
+
+.hero-logo-inline {
+  max-width: 170px;
+  width: 100%;
+  height: auto;
+  display: block;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(0, 229, 255, 0.25);
+  box-shadow: 0 6px 25px rgba(0, 0, 0, 0.6), 0 0 20px rgba(0, 229, 255, 0.25);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hero-logo-inline:hover {
+  transform: scale(1.03);
+  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.7), 0 0 35px rgba(0, 229, 255, 0.4);
+}
+
+/* --- Scattered Photo Frame Collage (Matches User Diagram Exactly) --- */
+.photo-collage-container {
+  position: relative;
+  width: 530px;
+  height: 385px;
+  flex-shrink: 0;
+}
+
+.photo-frame {
+  position: absolute;
+  background: #ffffff;
+  border: 4px solid #ffffff;
+  border-radius: 4px;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.55), 0 4px 10px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease, z-index 0.1s;
+  cursor: pointer;
+  user-select: none;
+}
+
+.photo-frame:hover {
+  z-index: 15 !important;
+  transform: translateY(-8px) scale(1.04);
+  box-shadow: 0 24px 50px rgba(0, 0, 0, 0.75), 0 0 30px rgba(0, 229, 255, 0.4);
+}
+
+.frame-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #06080D;
+}
+
+.frame-inner img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.4s ease;
+}
+
+.photo-frame:hover .frame-inner img {
+  transform: scale(1.06);
+}
+
+.frame-tag {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 3px 8px;
+  border-radius: 3px;
+  background: rgba(6, 8, 13, 0.82);
+  color: var(--color-cyan);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(0, 229, 255, 0.35);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+/* Frame 1: Bottom Left (Portrait) */
+.frame-1 {
+  width: 165px;
+  height: 225px;
+  left: 8px;
+  top: 145px;
+  z-index: 2;
+}
+
+/* Frame 2: Top Center-Left (Square / Hero on Top) */
+.frame-2 {
+  width: 215px;
+  height: 210px;
+  left: 72px;
+  top: 8px;
+  z-index: 4;
+}
+
+/* Frame 3: Center-Right (Square / Under Frame 2, over Frame 4) */
+.frame-3 {
+  width: 200px;
+  height: 195px;
+  left: 210px;
+  top: 85px;
+  z-index: 3;
+}
+
+/* Frame 4: Top Right (Elevated Right Side) */
+.frame-4 {
+  width: 175px;
+  height: 215px;
+  left: 345px;
+  top: 30px;
+  z-index: 1;
+}
+
+/* Dark theme enhancement for crisp outline */
+[data-theme="dark"] .photo-frame {
+  background: #ffffff;
+  border: 4px solid #ffffff;
+}
+
+/* Landing Title adjustments for left-align */
+.hero-split .landing-title {
+  text-align: left;
+  margin-top: 8px;
+  margin-bottom: 16px;
+}
+
+.hero-split .landing-subtitle {
+  text-align: left;
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 540px;
+  margin-bottom: 26px;
+}
+
+.hero-split .landing-cta-group {
+  justify-content: flex-start;
+  margin-bottom: 24px;
+}
+
+.hero-split .landing-telemetry {
+  max-width: 540px;
+  margin: 0;
+}
+
+/* Responsive: Stack on smaller screens */
+@media (max-width: 1060px) {
+  .hero-split {
+    flex-direction: column;
+    text-align: center;
+    gap: 40px;
+    padding: 20px 16px 36px;
+  }
+
+  .hero-left {
+    max-width: 100%;
+    text-align: center;
+  }
+
+  .hero-brand-emblem-inline {
+    display: flex;
+    justify-content: center;
+  }
+
+  .hero-split .landing-title,
+  .hero-split .landing-subtitle {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .hero-split .landing-cta-group {
+    justify-content: center;
+  }
+
+  .hero-split .landing-telemetry {
+    max-width: 600px;
+    margin: 0 auto;
+  }
+
+  .hero-right {
+    flex: none;
+    width: 100%;
+    max-width: 530px;
+  }
+}
+
+@media (max-width: 580px) {
+  .photo-collage-container {
+    transform: scale(0.72);
+    transform-origin: top center;
+    height: 280px;
+  }
+}
+
+/* Base landing-title and typography */
 
 .landing-title {
   font-family: var(--font-display);
-  font-size: clamp(2.3rem, 4.2vw, 3.5rem);
+  font-size: clamp(2.1rem, 3.8vw, 3.2rem);
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -428,25 +616,24 @@ body[data-theme="light"] .icon-moon { display: block; }
 }
 
 .landing-subtitle {
-  font-size: clamp(1.02rem, 1.8vw, 1.2rem);
+  font-size: clamp(1rem, 1.6vw, 1.12rem);
   color: var(--text-muted);
   max-width: 760px;
-  margin: 0 auto 34px;
+  margin: 0 auto 30px;
   line-height: 1.6;
 }
 
 .landing-cta-group {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 16px;
+  gap: 14px;
   flex-wrap: wrap;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
 }
 
 .btn-xl {
-  padding: 16px 34px;
-  font-size: 1.05rem;
+  padding: 14px 28px;
+  font-size: 0.98rem;
   font-weight: 800;
   border-radius: var(--radius-full);
   letter-spacing: 0.02em;
@@ -481,13 +668,12 @@ body[data-theme="light"] .icon-moon { display: block; }
 }
 
 .landing-telemetry {
-  max-width: 900px;
-  margin: 0 auto;
+  max-width: 540px;
   border: 1px solid var(--border-subtle);
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   border-radius: var(--radius-lg);
-  padding: 14px 22px;
+  padding: 12px 18px;
 }
 
 /* Showcase Section */

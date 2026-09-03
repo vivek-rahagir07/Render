@@ -601,6 +601,22 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // Hero Photo Collage Frames Click Handlers
+  document.querySelectorAll('.photo-frame').forEach((frame, idx) => {
+    frame.addEventListener('click', () => {
+      const label = frame.getAttribute('data-label') || 'Neural 3D Reconstruction';
+      // Load corresponding demo model
+      const demoModels = [
+        { url: '/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb', title: 'Tactical UAV Survey Alpha' },
+        { url: '/storage/jobs/1871f0ea-0247-4629-9670-d794e8b28980/outputs/scene.glb', title: 'Infrastructure & Facade Mapping' },
+        { url: '/storage/jobs/897771e6-d3e4-41f8-a064-798a974e470c/outputs/scene.glb', title: 'Aerial Terrain & Topography' },
+        { url: '/storage/jobs/7114097e-963c-4074-b651-5a626794aac2/outputs/scene.glb', title: 'Spatial Digital Twin' }
+      ];
+      const target = demoModels[idx % demoModels.length];
+      loadDemoModel(target.url, target.title, `${label} • Calibrated 3D`);
+    });
+  });
+
   // Viewport Demo Model Selector Dropdown
   if (demoModelSelect) {
     demoModelSelect.addEventListener('change', (e) => {

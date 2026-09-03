@@ -98,63 +98,101 @@
       
       <!-- STEP 0: Landing Hub & 3D Model Showcase Section -->
       <section id="home-section" class="view-panel active">
-        <!-- Hero Cockpit -->
-        <div class="landing-hero">
-          <!-- Hero Brand Emblem -->
-          <div class="hero-brand-emblem">
-            <div class="hero-emblem-halo"></div>
-            <img src="assets/aerovox-logo.png" alt="AEROVOX — Aerial Intelligence Reconstructed" class="hero-logo-img">
+        <!-- Hero Split Layout -->
+        <div class="landing-hero hero-split">
+          <!-- Left Column: Branding & CTA -->
+          <div class="hero-left">
+            <div class="hero-brand-emblem-inline">
+              <img src="assets/aerovox-logo.png" alt="AEROVOX Logo" class="hero-logo-inline">
+            </div>
+
+            <div class="hero-badge">
+              <span class="live-dot-beacon"></span>
+              <span>Single-Pass Drone Reconnaissance • Neural 3D Photogrammetry</span>
+            </div>
+            <h1 class="landing-title">
+              Autonomous Drone Video to <span class="hero-gradient">Metrically Accurate 3D</span>
+            </h1>
+            <p class="landing-subtitle">
+              Ingest single-pass UAV flight footage to synthesize dense point clouds, photorealistic PBR meshes, and georeferenced spatial twins with millimeter fidelity.
+            </p>
+
+            <!-- Primary Call to Actions -->
+            <div class="landing-cta-group">
+              <button type="button" id="hero-btn-explore" class="btn btn-primary btn-xl pulse-glow">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                  <polyline points="2 17 12 22 22 17"></polyline>
+                  <polyline points="2 12 12 17 22 12"></polyline>
+                </svg>
+                <span>Click to Explore 3D Models</span>
+                <span class="btn-badge-live">LIVE 3D</span>
+              </button>
+              <button type="button" id="hero-btn-upload" class="btn btn-secondary btn-xl">
+                <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Launch Recon Mission</span>
+              </button>
+            </div>
+
+            <!-- Compact Telemetry -->
+            <div class="telemetry-bar landing-telemetry">
+              <div class="telemetry-item">
+                <span class="telemetry-label">Metric Precision</span>
+                <span class="telemetry-value highlight-cyan-blue">&lt; 1.2 cm GSD</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="telemetry-label">Trajectory Ingestion</span>
+                <span class="telemetry-value">Single Linear UAV Pass</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="telemetry-label">Neural Engine</span>
+                <span class="telemetry-value">MUSt3R Dense Regressor</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="telemetry-label">Inference Hardware</span>
+                <span class="telemetry-value">Apple Metal (MPS)</span>
+              </div>
+            </div>
           </div>
 
-          <div class="hero-badge">
-            <span class="live-dot-beacon"></span>
-            <span>Single-Pass Drone Reconnaissance • Neural 3D Photogrammetry</span>
-          </div>
-          <h1 class="landing-title">
-            Autonomous Drone Video to <span class="hero-gradient">Metrically Accurate 3D</span>
-          </h1>
-          <p class="landing-subtitle">
-            Ingest single-pass UAV flight footage to synthesize dense point clouds, photorealistic PBR meshes, and georeferenced spatial twins with millimeter fidelity.
-          </p>
+          <!-- Right Column: Scattered Photo Frame Collage (Matching User Sketch) -->
+          <div class="hero-right">
+            <div class="photo-collage-container">
+              <!-- Frame 1: Bottom Left (Portrait) -->
+              <div class="photo-frame frame-1" data-label="Topology Scan">
+                <div class="frame-inner">
+                  <img src="assets/showcase-mesh-head.png" alt="3D Neural Mesh Topology" loading="eager">
+                  <div class="frame-tag">WIRE MESH</div>
+                </div>
+              </div>
 
-          <!-- Primary Call to Actions -->
-          <div class="landing-cta-group">
-            <button type="button" id="hero-btn-explore" class="btn btn-primary btn-xl pulse-glow">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                <polyline points="2 17 12 22 22 17"></polyline>
-                <polyline points="2 12 12 17 22 12"></polyline>
-              </svg>
-              <span>Click to Explore 3D Models</span>
-              <span class="btn-badge-live">LIVE 3D</span>
-            </button>
-            <button type="button" id="hero-btn-upload" class="btn btn-secondary btn-xl">
-              <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                <polyline points="17 8 12 3 7 8"></polyline>
-                <line x1="12" y1="3" x2="12" y2="15"></line>
-              </svg>
-              <span>Launch Recon Mission (Upload)</span>
-            </button>
-          </div>
+              <!-- Frame 2: Top Center-Left (Square / Hero Overlap) -->
+              <div class="photo-frame frame-2" data-label="Precision Mesh">
+                <div class="frame-inner">
+                  <img src="assets/showcase-mesh-car.png" alt="3D Surface Reconstruction" loading="eager">
+                  <div class="frame-tag">SURFACE MODEL</div>
+                </div>
+              </div>
 
-          <!-- Rapid Telemetry Status Bar -->
-          <div class="telemetry-bar landing-telemetry">
-            <div class="telemetry-item">
-              <span class="telemetry-label">Metric Precision</span>
-              <span class="telemetry-value highlight-cyan-blue">&lt; 1.2 cm GSD Scale</span>
-            </div>
-            <div class="telemetry-item">
-              <span class="telemetry-label">Trajectory Ingestion</span>
-              <span class="telemetry-value">Single Linear UAV Pass</span>
-            </div>
-            <div class="telemetry-item">
-              <span class="telemetry-label">Neural Engine</span>
-              <span class="telemetry-value">MUSt3R Dense Regressor</span>
-            </div>
-            <div class="telemetry-item">
-              <span class="telemetry-label">Hardware Inference</span>
-              <span class="telemetry-value">Apple Silicon Metal (MPS)</span>
+              <!-- Frame 3: Center-Right (Landscape / Overlapping) -->
+              <div class="photo-frame frame-3" data-label="Aerial Photogrammetry">
+                <div class="frame-inner">
+                  <img src="assets/showcase-terrain-1.png" alt="Aerial Terrain Photogrammetry" loading="eager">
+                  <div class="frame-tag">ELEVATION TWIN</div>
+                </div>
+              </div>
+
+              <!-- Frame 4: Top Right (Elevated) -->
+              <div class="photo-frame frame-4" data-label="Spatial Digital Twin">
+                <div class="frame-inner">
+                  <img src="assets/showcase-terrain-2.png" alt="Geospatial Mountain Twin" loading="eager">
+                  <div class="frame-tag">GEOSPATIAL 3D</div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
