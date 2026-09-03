@@ -1,5 +1,5 @@
 /**
- * Render 3D — Aerial Reconnaissance & Single-Pass Drone 3D Studio
+ * AEROVOX — Autonomous Drone Reconnaissance & 3D Mapping Studio
  * Client Application Logic
  */
 
@@ -109,13 +109,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- Theme Switcher (Noir Gold / Ivory Gold) ---
   function applyTheme(theme) {
     document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('render3d_theme', theme);
+    localStorage.setItem('aerovox_theme', theme);
     if (themeToggleLabel) {
       themeToggleLabel.textContent = theme === 'dark' ? 'Noir Gold' : 'Ivory Gold';
     }
   }
 
-  const savedTheme = localStorage.getItem('render3d_theme') || 'dark';
+  const savedTheme = localStorage.getItem('aerovox_theme') || 'dark';
   applyTheme(savedTheme);
 
   if (themeToggleBtn) {

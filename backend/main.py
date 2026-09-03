@@ -44,8 +44,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="3D Reconstruction API",
-    description="Local-first 3D reconstruction using MUSt3R and PyTorch MPS",
+    title="AEROVOX — 3D Reconstruction API",
+    description="AEROVOX: Local-first 3D neural reconstruction using MUSt3R and PyTorch MPS",
     version="1.0.0",
     lifespan=lifespan
 )

@@ -1,4 +1,4 @@
-# 🛰️ Render 3D — Single-Pass Drone & Aerial 3D Reconstruction Studio
+# 🛰️ AEROVOX — Autonomous Drone & Aerial 3D Reconstruction Studio
 
 An AI-enabled system capable of generating georeferenced, metrically accurate 3D scene models from **single-pass drone video streams** or **multi-angle aerial photographs**. Powered by **MUSt3R** neural regressors and accelerated with **Apple Silicon (MPS)** and **CUDA**.
 

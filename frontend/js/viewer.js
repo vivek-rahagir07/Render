@@ -1,5 +1,5 @@
 /**
- * Advanced Three.js 3D Geospatial Viewer & Tactical Aerial Studio
+ * AEROVOX — Advanced Three.js 3D Geospatial Viewer & Tactical Aerial Studio
  * 
  * Features:
  *   - Spatial Holographic Keyframe Viewers with Optical Ray Frustums & Ground Tethers
