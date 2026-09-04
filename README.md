@@ -14,14 +14,11 @@ An AI-enabled, **local-first** system that turns **single-pass drone video strea
 4. [Manual Installation](#-manual-step-by-step-installation)
 5. [Configuration](#-configuration-environment-variables)
 6. [Project Structure](#-project-structure)
-7. [Backend Reference](#-backend-reference)
-8. [Frontend Reference](#-frontend-reference)
-9. [3D Viewer Capabilities](#-3d-viewer-capabilities-modelviewer)
-10. [API Reference](#-api-reference)
-11. [Output Formats & Exports](#-output-formats--exports)
-12. [Tech Stack](#-tech-stack)
-13. [Operational Applications](#-operational-applications)
-14. [Troubleshooting](#-troubleshooting)
+7. [3D Viewer Capabilities](#-3d-viewer-capabilities-modelviewer)
+8. [Output Formats & Exports](#-output-formats--exports)
+9. [Tech Stack](#-tech-stack)
+10. [Operational Applications](#-operational-applications)
+11. [Troubleshooting](#-troubleshooting)
 
 ---
 
@@ -198,167 +195,22 @@ Render/
 
 ---
 
-## 🧩 Backend Reference
-
-### `backend/main.py` — FastAPI Application
-
-The single entrypoint that serves the REST API **and** the static frontend.
-
-- **Lifespan worker** — On startup, an `asyncio` background task runs `service.start_worker()`, which owns the single shared `asyncio.Queue` and consumes jobs one at a time. The worker is cleanly cancelled on shutdown.
-- **CORS** is wide open (`allow_origins=["*"]`) for local development.
-- **Static mounts:**
-  - `/storage` → the `storage/` directory (so GLB/PLY outputs are HTTP-downloadable).
-  - `/` → the `frontend/` directory (`html=True` serves `index.html`).
-
-**Endpoints (see [API Reference](#-api-reference) below).**
-
-### `backend/reconstruction_service.py` — Reconstruction Service
-
-This is the orchestration brain. Key components:
-
-#### Data classes
-
-- **`JobStatus`** (Enum) — `queued`, `preprocessing`, `reconstructing`, `exporting`, `completed`, `failed`, `cancelled`.
-- **`JobConfig`** — `image_size` (224/512), `device` (mps/cuda/cpu), `max_bs` (batch size), `num_refinements_iterations`, `execution_mode` (`retrieval` / `linseq`), `cam_size`, `render_once`, `num_mem_imgs`, `remove_background`.
-- **`JobInfo`** — full state for a job: id, status, progress %, stage, message, timestamps, image count, config, **last 500 log lines**, output file URIs, and error text.
-
-#### `ReconstructionService` — key methods
-
-| Method | What it does |
-|---|---|
-| `__init__` | Resolves the MUSt3R root, python binary, model weight paths, and script; loads any existing jobs from disk. |
-| `_load_existing_jobs` | Scans `storage/jobs/` on startup, restores completed jobs, and **marks any interrupted-in-progress job as `failed`** so the UI doesn't show a stuck "reconstructing" state after a server restart. |
-| `_save_job_to_disk` | Persists `job.json` after every state change (durable state across restarts). |
-| `check_environment` | Probes the MUSt3R install, python, weights, and runs `torch.backends.mps/cuda.is_available()` to report readiness + detected device. Returned by `/api/health`. |
-| `create_job(config)` | Creates a UUID job, makes `images/` and `outputs/` dirs, saves initial `job.json`. |
-| `validate_and_save_image` | Sanitizes filenames, strips path traversal, **strips EXIF orientation**, converts to RGB, **downscales to ≤1600 px**, re-encodes as JPEG q95. Rejects non-image / corrupt files. |
-| `get_job(job_id)` | Fetches from memory or falls back to `job.json` on disk. |
-| `cancel_job(job_id)` | Flips status to `cancelled`, `terminate()`s the active subprocess (escalates to `kill()` if it won't die within 0.5 s). |
-| `_append_log` / `_update_progress` | Thread-safe log + progress updates, persisted to `job.json`. |
-| `_apply_ai_background_removal` | Threaded `rembg` matting (u2netp → u2net fallback) to isolate foreground subjects. Falls back to the original frames if it fails or yields too few good masks. |
-| `_run_reconstruction_sync` | The core worker. Runs preprocessing hooks → optional AI matting → builds the MUSt3R CLI command → spawns the subprocess → **parses TQDM + stage strings from stdout to drive live progress %** → calls `_postprocess_models` on success. |
-| `_postprocess_models` | Picks the best confidence-tier GLB, generates `scene.ply` from the GLB (via `trimesh`), and triggers mesh exports. Populates `output_files` with all available format URIs. |
-| `generate_mesh_exports` | Spawns a Python subprocess running Open3D Poisson surface reconstruction (depth=8, density-trim, vertex colors via KD-tree) to produce `scene_mesh.stl`, `.obj`, and `.glb`. |
-| `submit_job` / `start_worker` | The asyncio queue + worker loop. `submit_job` waits up to 5 s for the worker to create the shared queue, then enqueues. The worker skips cancelled/completed/failed jobs. |
-
-#### Pluggable preprocessing hooks
-
-`BasePreprocessingHook` defines a `process_images(image_dir, job_info) -> Path` interface. The default is a no-op passthrough; the design is intentionally pluggable so YOLO / SAM 2 dynamic-object removal can be slotted in later without touching the worker.
-
-### `backend/engine/get_reconstruction.py` — MUSt3R Inference Executable
-
-The neural workhorse, spawned as a subprocess. Highlights:
-
-- **CLI argument parser** with MUSt3R parameters: `--image_dir`, `--output`, `--weights`, `--retrieval`, `--device`, `--image_size` (512/224), `--execution_mode` (`linseq` / `retrieval` / `vidseq` / `vidslam`), `--max_bs`, `--num_refinements_iterations`, `--num_mem_imgs`, `--cam_size`, `--min_conf_thr`, `--flying_edges_thr`, `--file_type`.
-- **`apply_fast_sor`** — Statistical Outlier Removal (cKDTree, k=16, std_ratio=1.15) purges stray noise dots and detached floaters from the point cloud.
-- **`filter_flying_edges`** — Detects depth-discontinuity tears at frame edges (where depth gradients exceed a depth-proportional threshold) and masks them out.
-- **`export_clean_scene_glb`** — The clean exporter: per-view confidence masking, alpha masking (for matted PNGs), flying-edge filtering, SOR denoising, camera frustum insertion with `dust3r.viz`, and GLB/PLY export.
-- **`export_surface_mesh`** — Open3D Poisson surface reconstruction at depth=8 with `linear_fit=False` (this is the fix for Kazhdan PoissonRecon's "Failed to close loop" freeze), density-based vertex trimming, KD-tree color transfer, and STL/OBJ/GLB mesh export. Falls back to a trimesh convex hull if Open3D is unavailable or the cloud is too small.
-- **Precision tiers** — After the primary `scene.glb`, the engine exports multiple confidence-threshold variants (`scene_ultra.glb`, `scene_clean.glb`, `scene_balanced.glb`, `scene_dense.glb`, `scene_3.0/2.5/2.0/1.5.glb`) so the viewer's **Precision Filter** dropdown can switch between geometry densities on the fly.
-- **Device fallback** — MPS unavailable → CPU; CUDA unavailable → CPU. TF32 matmul enabled on CUDA.
-- **PYTHONPATH bootstrapping** — Searches `MUST3R_ROOT`, `dust3r`, and `dust3r/croco` and inserts them into `sys.path` before importing `must3r`.
-
-### `backend/requirements.txt`
-
-FastAPI + uvicorn + python-multipart (web server / uploads), Pillow + numpy + scipy (image & point math), trimesh (mesh/scene export), rembg + onnxruntime (AI matting), torch + torchvision + einops (neural inference), open3d (Poisson meshing), opencv-python + matplotlib + tqdm (MUSt3R deps).
-
----
-
-## 🖥️ Frontend Reference
-
-A single-page Three.js app with three views: **Overview**, **Mission Setup**, and **3D Viewport**, plus a live pipeline HUD.
-
-### `frontend/js/api.js` — REST Client (`window.API`)
-
-| Method | Endpoint | Role |
-|---|---|---|
-| `checkHealth()` | `GET /api/health` | Polls engine readiness + detected device (MPS/CUDA/CPU). Drives the header status pill. |
-| `createJob(files, config)` | `POST /api/reconstruction/jobs` | Uploads frames as `multipart/form-data` with the tuning config. |
-| `getJobStatus(jobId)` | `GET /api/reconstruction/jobs/{id}` | Returns progress, stage, message, logs, and output file URIs. Polled every 1.2 s. |
-| `cancelJob(jobId)` | `POST /api/reconstruction/jobs/{id}/cancel` | Aborts an active job. |
-| `getDownloadUrl(jobId, format)` | — | Builds a `/download/{format}` URL for `glb`/`stl`/`obj`/`ply`. |
-
-### `frontend/js/app.js` — App Controller
-
-Wires the entire UI on `DOMContentLoaded`. Key behaviors:
-
-- **Theme toggle** — Dual-theme design system (Noir Gold / Ivory Gold), persisted to `localStorage` (`aerovox_theme`).
-- **System health pill** — Calls `API.checkHealth()` on load; shows `MPS • Engine Ready` / `MUSt3R Initializing` / `Engine Offline`.
-- **Tab switching** — Single-Pass Drone Video vs. Multi-Angle Aerial Photos. Toggles `fileInput.accept` and the dropzone subtitle.
-- **Drag & drop + file picker** — Full dropzone with dragenter/dragover/drop styling and click-to-browse delegation.
-- **`processDroneVideo(videoFile)`** — Decodes the video in-browser via an offscreen `<video>` element, seeks to evenly-spaced timestamps (16–30 frames, scaled by duration), draws each to a canvas, and encodes JPEG keyframes. Each seek and `toBlob` call is guarded by a timeout so a missed event never stalls the loop.
-- **Gallery** — Thumbnail grid with per-frame remove buttons, live count, and a minimum-2-frames gate on the Generate button.
-- **Mission presets** — `Rapid Tactical Recon` (512px, 6 iter, bs 2), `Metric Terrain & Facades` (512px, 10 iter, bs 1), `Lightning 224 Preview` (224px, 4 iter, bs 2). Override the advanced settings.
-- **Advanced settings** — Neural backbone resolution (512/224), pose refinement iterations (1–15), flight trajectory strategy (retrieval/linseq), inference hardware (mps/cpu), and the AI Subject Isolation toggle.
-- **`startPolling(jobId)`** — 1.2 s interval poller. Maps job stage → HUD stage title, streams the last 50 log lines into the terminal drawer, and calls `onJobCompleted` when status is `completed`.
-- **`updateJobProgressUI(job)`** — Drives the HUD progress bar, stage title/description, the live framing hologram recolor, and the terminal log.
-- **`onJobCompleted(job)`** — Loads the finished GLB into the viewer and switches to the 3D viewport.
-- **Demo/showcase models** — Three preloaded reconstructions load into the viewer from `/storage/jobs/...` for instant exploration without running a job.
-- **Precision filter dropdown** — Reload the viewport from any confidence-tier GLB the engine produced (`scene_clean.glb`, `scene_ultra.glb`, …).
-- **Download menu** — One-click export to GLB / STL / OBJ / PLY (STL & OBJ are generated on demand by the backend).
-- **Scene controls panel** — Point size slider, brightness slider, and wireframe toggle, all driving the live viewer.
-
-### `frontend/js/viewer.js` — `ModelViewer` (Three.js r128)
-
-A self-contained class that builds the 3D scene. Major capabilities:
-
-| Capability | Implementation |
-|---|---|
-| **Scene & camera** | `PerspectiveCamera` (45° FOV, 0.01–1000 near/far), `OrbitControls` with damping, ACES filmic tone mapping, sRGB output, fog. |
-| **Geospatial grid** | A 12×32 grid + four concentric radar rings + a rotating radar sweep segment (`_buildGeospatialGrid`). |
-| **Ambient particles** | 140-point atmospheric particle field that slowly rotates. |
-| **Live flight framing** | `setupLiveFraming(files)` renders up to 36 camera cards (textured with the actual keyframes), each with a lens frustum, ground tether, ground ring, and a center ray to the origin. A holographic core (3 tori + an octahedron) pulses and rotates. A Catmull-Rom spline traces the flight path with a moving tracer sphere. Camera auto-orbits during analysis. |
-| **Stage-driven recolor** | `updateLiveFramingStage` recolors the holographic core per pipeline stage (match→blue, refine→amber, export→green). |
-| **Model loading** | `loadModel(url, onProgress, format)` — GLTFLoader for `.glb`, PLYLoader for `.ply`. Calls `fitCameraToModel` to frame the model and `_postProcessScene` to separate point clouds from surface meshes and camera frustums. |
-| **Camera frustum detection** | Small meshes (≤50 vertices) are tagged as camera frustums and hidden by default; toggleable with `toggleCameraFrustums`. |
-| **Metric ruler** | `toggleMeasurementTool` — click two points on the model; a dashed line + markers render, and the HUD shows distance (×5 metric scale) and elevation Δ. |
-| **Theme cycling** | `toggleBackground` cycles 4 scene themes (Tactical Cyan, Deep Blue, Amber Ops, Matrix Green). |
-| **Point style** | Smooth splats (radial-gradient texture) vs. sharp points, toggleable live. |
-| **Brightness** | `setBrightness` scales tone-mapping exposure **and** ambient/directional light intensity (point clouds ignore tone mapping, so lights are scaled too). |
-| **Wireframe** | `setWireframe` toggles wireframe on all non-frustum meshes. |
-| **Screenshot** | `captureScreenshot` renders the canvas to a PNG download (`preserveDrawingBuffer: true` enables this). |
-| **Fullscreen** | `toggleFullscreen` on the viewer section, with a 150 ms resize debounce. |
-| **Mesh / point toggle** | `toggleMeshMode` swaps between the solid `scene.glb` and the `scene_points.glb` point cloud. |
-| **Auto-rotate, reset camera, grid toggle, point size** | All bound to the viewer dock buttons. |
-
----
-
 ## 🧪 3D Viewer Capabilities (`ModelViewer`)
 
-- **Metric 3D Ruler** — Click any two surface points to measure distance and elevation in meters.
-- **Auto-Orbit / Reset Camera** — Animated turntable and one-click reframing.
-- **Point Size, Brightness, Wireframe** — Live sliders and toggles in the Scene Controls panel.
-- **Solid ↔ Point Cloud toggle** — Switch between the textured mesh and the raw point cloud.
-- **Camera Frustums toggle** — Show/hide the sparse per-view camera wireframes MUSt3R emits.
-- **Precision Filter** — Hot-swap between confidence tiers (Ultra / Clean / Balanced / Dense / 5.0 / 3.0 / 2.0 / 1.5) without re-running the job.
-- **Theme cycling** — 4 viewport color schemes.
-- **PNG snapshot** — One-click viewport screenshot.
-- **Fullscreen** — Immersive inspection.
-- **Stats badge** — Live point count and format readout ("PLY Point Cloud • 42.3k Splats • Metric Accurate").
+The Three.js (r128) viewport that every reconstruction lands in. Every control is also keyboard-discoverable via the **Scene Controls** panel.
 
----
-
-## 📡 API Reference
-
-| Endpoint | Method | Description |
-|---|---|---|
-| `/api/health` | `GET` | System health: `is_ready`, MUSt3R root, python binary, weights presence, MPS/CUDA availability, detected device, storage dir. |
-| `/api/reconstruction/jobs` | `POST` | Upload frames (`files[]`) + config (`image_size`, `device`, `max_bs`, `num_refinements_iterations`, `execution_mode`, `cam_size`, `remove_background`). Validates ≥2 images, queues the job, returns `{job_id, status, image_count, message}`. |
-| `/api/reconstruction/jobs/{job_id}` | `GET` | Live job state: `status`, `progress`, `stage`, `message`, timestamps, `image_count`, `output_files`, `error`, and last 50 log lines. |
-| `/api/reconstruction/jobs/{job_id}/cancel` | `POST` | Cancels a queued or active job and terminates the subprocess. |
-| `/api/reconstruction/jobs/{job_id}/download/{format}` | `GET` | Downloads `glb`, `ply`, `stl`, `obj`, or `mesh_glb`. STL/OBJ/mesh_glb are generated on demand (Open3D Poisson) if not already present. |
-| `/storage/...` | `GET` | Static mount — direct access to any job's `outputs/` and `images/` artifacts. |
-
-### Job lifecycle states
-
-```
-queued → preprocessing → reconstructing → exporting → completed
-                                    └─→ failed
-                  (any time) ──→ cancelled
-```
-
-Progress is reported as a coarse stage map:
-- `5%` Queued → `8–15%` AI Matting → `18%` Loading Weights → `24–58%` Neural Ingestion (TQDM Pass 1) → `58–84%` 3D Optimization (TQDM Pass 2) → `86%` Denoising → `90%` Exporting → `95%` Poisson Meshing → `100%` Completed.
+- **Metric 3D Ruler** — Click any two surface points to draw a dashed line between them; the HUD shows distance and elevation Δ in meters.
+- **Auto-Orbit / Reset Camera** — Animated turntable and one-click reframing to the model's bounding sphere.
+- **Point Size, Brightness, Wireframe** — Live sliders and toggles bound directly to the loaded geometry.
+- **Solid ↔ Point Cloud toggle** — Swap between the textured mesh (`scene.glb`) and the raw points cloud.
+- **Camera Frustums toggle** — Show/hide the sparse per-view camera wireframes MUSt3R emits (auto-hidden by default).
+- **Precision Filter** — Hot-swap between confidence tiers (`scene_ultra`, `scene_clean`, `scene_balanced`, `scene_dense`, plus 5.0/3.0/2.0/1.5 thresholds) without re-running the job.
+- **Live Flight Framing** — Up to 36 holographic camera cards (textured with the real keyframes) trace a Catmull-Rom spline of the flight path, with a pulsing core whose color reflects the current pipeline stage.
+- **Geospatial grid + radar sweep** — A 12×32 ground grid with concentric rings and a rotating sweep segment for situational context.
+- **Theme cycling** — 4 viewport color schemes (Tactical Cyan, Deep Blue, Amber Ops, Matrix Green).
+- **PNG snapshot** — One-click viewport screenshot via `preserveDrawingBuffer`.
+- **Fullscreen** — Immersive inspection of the 3D scene.
+- **Stats badge** — Live point count and format readout (e.g. *PLY Point Cloud • 42.3k Splats • Metric Accurate*).
 
 ---
 
