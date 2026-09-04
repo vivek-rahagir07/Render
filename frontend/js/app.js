@@ -448,12 +448,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function updateJobProgressUI(job) {
-    if (hudProgressFill) hudProgressFill.style.width = `${job.progress}%`;
-    if (hudStageTitle) hudStageTitle.textContent = `${job.stage || 'Reconstructing'} (${job.progress}%)`;
-    if (hudStageDesc) hudStageDesc.textContent = job.message || '';
+    const displayProgress = Math.max(5, job.progress || 0);
+    if (hudProgressFill) hudProgressFill.style.width = `${displayProgress}%`;
+    if (hudStageTitle) {
+      const stageName = job.stage || (job.status === 'queued' ? 'Initializing' : 'Reconstructing');
+      hudStageTitle.textContent = `${stageName} (${displayProgress}%)`;
+    }
+    if (hudStageDesc) hudStageDesc.textContent = job.message || 'Processing aerial reconnaissance frames...';
 
     if (state.viewer) {
-      state.viewer.updateLiveFramingStage(job.stage, job.progress);
+      state.viewer.updateLiveFramingStage(job.stage, displayProgress);
     }
 
     if (job.logs && job.logs.length > 0 && hudTerminalBody) {
@@ -461,6 +465,9 @@ document.addEventListener('DOMContentLoaded', () => {
       job.logs.forEach(line => {
         const div = document.createElement('div');
         div.className = 'log-line';
+        if (line.includes('ERROR') || line.includes('Error')) div.classList.add('error');
+        else if (line.includes('SUCCESS') || line.includes('complete')) div.classList.add('success');
+        else if (line.includes('[Job]') || line.includes('[System]')) div.classList.add('info');
         div.textContent = line;
         hudTerminalBody.appendChild(div);
       });

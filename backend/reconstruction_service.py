@@ -145,14 +145,16 @@ class ReconstructionService:
                         with open(job_file, "r") as f:
                             d = json.load(f)
                         st = d.get("status", "completed")
-                        if st in ["preprocessing", "reconstructing", "exporting"]:
+                        if st in ["queued", "preprocessing", "reconstructing", "exporting"]:
                             st = "failed"
+                            d["status"] = "failed"
                             d["stage"] = "Interrupted"
-                            d["error"] = "Server was restarted during reconstruction."
+                            d["error"] = "Server was restarted before or during reconstruction."
+                            d["completed_at"] = datetime.utcnow().isoformat()
                         job = JobInfo(
                             job_id=job_id,
                             status=JobStatus(st),
-                            progress=d.get("progress", 100),
+                            progress=d.get("progress", 100) if st == "completed" else d.get("progress", 0),
                             stage=d.get("stage", "Completed"),
                             message=d.get("message", ""),
                             created_at=d.get("created_at", ""),
@@ -165,6 +167,8 @@ class ReconstructionService:
                             error=d.get("error")
                         )
                         self.jobs[job_id] = job
+                        if st == "failed":
+                            self._save_job_to_disk(job)
                     except Exception:
                         pass
                 else:
@@ -287,9 +291,9 @@ class ReconstructionService:
         job = JobInfo(
             job_id=job_id,
             status=JobStatus.QUEUED,
-            progress=0,
+            progress=5,
             stage="Queued",
-            message="Images uploaded, waiting in queue.",
+            message="Mission initialized, preparing neural regressors...",
             config=cfg_dict
         )
 
@@ -445,7 +449,12 @@ class ReconstructionService:
                 except Exception:
                     session = None
 
+            total_imgs = len(image_paths)
+            completed_count = 0
+            matting_lock = threading.Lock()
+
             def process_single(p: Path):
+                nonlocal completed_count
                 out_p = masked_dir / f"{p.stem}.png"
                 try:
                     with Image.open(p) as img:
@@ -457,15 +466,22 @@ class ReconstructionService:
                         res.save(out_p, "PNG")
                 except Exception:
                     shutil.copy2(p, masked_dir / f"{p.stem}{p.suffix}")
+                finally:
+                    with matting_lock:
+                        completed_count += 1
+                        cur = completed_count
+                    pct = 6 + int((cur / max(1, total_imgs)) * 9)
+                    self._update_progress(job_id, pct, "AI Matting", f"Isolating foreground subjects ({cur}/{total_imgs} frames)...")
 
             with ThreadPoolExecutor(max_workers=min(4, os.cpu_count() or 2)) as executor:
                 futures = [executor.submit(process_single, p) for p in image_paths]
-                for f in as_completed(futures, timeout=45):
+                for f in as_completed(futures, timeout=60):
                     pass
 
             valid_masked = [f for f in masked_dir.iterdir() if f.is_file() and f.suffix.lower() in (".jpg", ".jpeg", ".png", ".webp") and f.stat().st_size > 1000]
             if len(valid_masked) >= 2:
                 self._append_log(job_id, f"[AI Matting] Successfully isolated subjects ({len(valid_masked)} frames ready for 3D reconstruction).")
+                self._update_progress(job_id, 15, "AI Matting", f"Foreground isolation complete ({len(valid_masked)} frames ready).")
                 return masked_dir
             else:
                 self._append_log(job_id, "[AI Matting Notice] Using original high-res frames for 3D reconstruction.")
@@ -606,7 +622,9 @@ class ReconstructionService:
             with self._lock:
                 self.active_processes[job_id] = process
 
-            progress_counter = 15
+            inference_pass = 1
+            last_tqdm_pct = -1
+
             for line in iter(process.stdout.readline, ''):
                 if not line:
                     break
@@ -616,16 +634,49 @@ class ReconstructionService:
 
                 self._append_log(job_id, line_str)
 
+                # Check for TQDM progress bar lines, e.g. " 41%|████ | 11/27 [00:26<00:27, 1.74s/it...]"
+                tqdm_match = re.search(r"(\d+)%\|.*?\|\s*(\d+)/(\d+)", line_str)
+                if tqdm_match:
+                    pct = int(tqdm_match.group(1))
+                    cur = int(tqdm_match.group(2))
+                    tot = int(tqdm_match.group(3))
+
+                    # If the percentage dropped from high (>70) to low (<10), we entered Pass 2 (Optimization/Refinement)
+                    if last_tqdm_pct > 70 and pct < 15:
+                        inference_pass = 2
+                    last_tqdm_pct = pct
+
+                    if inference_pass == 1:
+                        calc_progress = 22 + int((pct / 100.0) * 36)
+                        self._update_progress(
+                            job_id,
+                            calc_progress,
+                            "Neural Ingestion",
+                            f"Regressing viewpoints & camera poses ({cur}/{tot} frames, {pct}%)..."
+                        )
+                    else:
+                        calc_progress = 58 + int((pct / 100.0) * 26)
+                        self._update_progress(
+                            job_id,
+                            calc_progress,
+                            "3D Optimization",
+                            f"Refining 3D geometry & global alignment ({cur}/{tot}, {pct}%)..."
+                        )
+                    continue
+
                 lower = line_str.lower()
                 if "loading model" in lower:
-                    self._update_progress(job_id, 20, "Reconstructing", "Loading MUSt3R neural network weights...")
+                    self._update_progress(job_id, 18, "Loading Weights", "Loading MUSt3R neural network weights onto Apple MPS...")
+                elif "running inference" in lower or "updating memory" in lower:
+                    self._update_progress(job_id, 24, "Neural Ingestion", "Running multi-view neural regressors...")
                 elif "retrieval" in lower or "matching" in lower or "finding pairs" in lower:
-                    self._update_progress(job_id, 35, "Matching", "Extracting features & matching image pairs...")
-                elif "global alignment" in lower or "optimizing" in lower or "refinement" in lower:
-                    progress_counter = min(progress_counter + 5, 80)
-                    self._update_progress(job_id, progress_counter, "Optimizing", "Optimizing 3D camera poses & scene geometry...")
-                elif "exporting" in lower or "clean" in lower or "scene" in lower:
-                    self._update_progress(job_id, 85, "Exporting", "Denoising & generating clean high-precision 3D files...")
+                    self._update_progress(job_id, 35, "Matching", "Extracting deep features & matching viewpoint pairs...")
+                elif "clean exporter" in lower or "pristine primary model" in lower or "sor" in lower:
+                    self._update_progress(job_id, 86, "Denoising", "Filtering flying edges & statistical outlier points...")
+                elif "exporting clean 3d scene" in lower or "scene.glb" in lower or "scene.ply" in lower:
+                    self._update_progress(job_id, 90, "Exporting", "Writing high-precision GLB & PLY 3D models...")
+                elif "surface meshing" in lower or "poisson" in lower or "watertight" in lower:
+                    self._update_progress(job_id, 95, "Poisson Meshing", "Generating watertight solid 3D mesh surface...")
 
             process.stdout.close()
             try:
@@ -868,26 +919,51 @@ except Exception:
             return False
 
     async def submit_job(self, job_id: str):
-        """Asynchronously queues the job for background execution."""
+        """Asynchronously queues the job for background execution.
+
+        Waits for the worker to initialise the shared asyncio.Queue so that
+        submit_job and start_worker always use the *same* queue instance.
+        """
+        # Spin-wait (up to ~5 s) for the worker to create the queue.
+        # Under normal startup this resolves in <50 ms.
+        for _ in range(100):
+            if self._queue is not None:
+                break
+            await asyncio.sleep(0.05)
+
         if self._queue is None:
+            # Defensive fallback — should never happen if lifespan started the worker.
+            logger.warning("submit_job: worker queue was not ready — creating queue as fallback")
             self._queue = asyncio.Queue()
+
         await self._queue.put(job_id)
+        logger.info(f"Job {job_id} submitted to reconstruction queue (qsize={self._queue.qsize()})")
 
     async def start_worker(self):
         """Background worker consuming jobs from the queue.
 
-        Creates the asyncio.Queue lazily inside the running event loop to avoid
-        'Future attached to a different loop' errors that occur when the queue
-        is created at import/init time before uvicorn starts the loop.
+        Creates the single shared asyncio.Queue inside the running event loop
+        so that submit_job (which awaits it) always pushes to the same object.
         """
-        if self._queue is None:
-            self._queue = asyncio.Queue()
+        # ── Single source-of-truth for the queue ──────────────────────
+        self._queue = asyncio.Queue()
 
         logger.info("Starting background reconstruction worker...")
+
+        # Worker queue starts fresh for the current server session.
+        # Any unfinished jobs from prior runs are cleanly marked interrupted by _load_existing_jobs.
+
         while True:
             try:
                 job_id = await self._queue.get()
                 logger.info(f"Worker picked up job {job_id}")
+                # Skip jobs that were cancelled while waiting in the queue
+                with self._lock:
+                    job = self.jobs.get(job_id)
+                    if job and job.status in (JobStatus.CANCELLED, JobStatus.COMPLETED, JobStatus.FAILED):
+                        logger.info(f"Skipping job {job_id} (status={job.status.value})")
+                        self._queue.task_done()
+                        continue
                 try:
                     await asyncio.to_thread(self._run_reconstruction_sync, job_id)
                 except Exception as e:

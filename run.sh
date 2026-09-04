@@ -85,4 +85,9 @@ elif [[ "$OSTYPE" == "linux-gnu"* ]]; then
     (sleep 1.5 && xdg-open "http://$HOST:$PORT" 2>/dev/null) &
 fi
 
-exec "$PYTHON" -m uvicorn backend.main:app --host "$HOST" --port "$PORT" --reload
+RELOAD_FLAG=""
+if [[ "$*" == *"--reload"* ]] || [[ "$*" == *"--dev"* ]]; then
+    RELOAD_FLAG="--reload --reload-dir backend"
+fi
+
+exec "$PYTHON" -m uvicorn backend.main:app --host "$HOST" --port "$PORT" $RELOAD_FLAG
