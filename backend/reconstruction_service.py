@@ -79,8 +79,8 @@ class ReconstructionService:
         if os.getenv("MUST3R_ROOT"):
             candidate_roots.append(Path(os.path.expanduser(os.getenv("MUST3R_ROOT"))))
         candidate_roots.extend([
-            Path.home() / "must3r",
             self.base_dir / "must3r",
+            Path.home() / "must3r",
             Path.home() / "Documents" / "must3r",
             Path.home() / "Downloads" / "must3r",
             Path("/opt/must3r")

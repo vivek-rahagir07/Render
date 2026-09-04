@@ -15,3 +15,11 @@ scipy
 tqdm
 opencv-python
 matplotlib
+gradio>=4.0.0
+roma
+open3d
+scikit-learn
+pyyaml
+pyaml
+faiss-cpu
+asmk @ git+https://github.com/lojzezust/asmk.git

@@ -15,16 +15,16 @@ if [ ! -f ".env" ]; then
 fi
 
 MUST3R_PATH=""
-if [ -d "$HOME/must3r" ]; then
-    MUST3R_PATH="$HOME/must3r"
-elif [ -d "$ROOT_DIR/must3r" ]; then
+if [ -d "$ROOT_DIR/must3r" ]; then
     MUST3R_PATH="$ROOT_DIR/must3r"
+elif [ -d "$HOME/must3r" ]; then
+    MUST3R_PATH="$HOME/must3r"
 else
     echo ""
     echo "🔍 MUSt3R engine not found on this machine."
-    echo "📥 Auto-cloning MUSt3R repository into $HOME/must3r ..."
-    git clone --recursive https://github.com/naver/must3r.git "$HOME/must3r"
-    MUST3R_PATH="$HOME/must3r"
+    echo "📥 Auto-cloning MUSt3R repository into $ROOT_DIR/must3r ..."
+    git clone --recursive https://github.com/naver/must3r.git "$ROOT_DIR/must3r"
+    MUST3R_PATH="$ROOT_DIR/must3r"
     echo "✅ MUSt3R cloned successfully."
 fi
 
@@ -55,13 +55,24 @@ download_file "https://download.europe.naverlabs.com/must3r/MUSt3R_512.pth" "$MO
 download_file "https://download.europe.naverlabs.com/must3r/MUSt3R_512_retrieval_trainingfree.pth" "$MODELS_DIR/MUSt3R_512_retrieval_trainingfree.pth" "Retrieval Weights (8.4 MB)"
 
 VENV_DIR=""
-if [ -d "$MUST3R_PATH/.venv" ]; then
-    VENV_DIR="$MUST3R_PATH/.venv"
-elif [ -d "$ROOT_DIR/.venv" ]; then
+if [ -d "$ROOT_DIR/.venv" ]; then
     VENV_DIR="$ROOT_DIR/.venv"
+elif [ -d "$MUST3R_PATH/.venv" ]; then
+    VENV_DIR="$MUST3R_PATH/.venv"
 else
-    echo "📦 Setting up Python virtual environment in .venv..."
-    python3 -m venv "$ROOT_DIR/.venv"
+    # Find suitable python version (prefer 3.11 or 3.10 for ML/Open3D compatibility)
+    PY_CMD=""
+    if command -v python3.11 >/dev/null 2>&1; then
+        PY_CMD="python3.11"
+    elif command -v python3.10 >/dev/null 2>&1; then
+        PY_CMD="python3.10"
+    elif command -v python3.12 >/dev/null 2>&1; then
+        PY_CMD="python3.12"
+    else
+        PY_CMD="python3"
+    fi
+    echo "📦 Setting up Python virtual environment in .venv using $PY_CMD..."
+    $PY_CMD -m venv "$ROOT_DIR/.venv"
     VENV_DIR="$ROOT_DIR/.venv"
 fi
 
