@@ -1,6 +1,7 @@
 
 import os
 import sys
+import shutil
 import argparse
 import pickle
 import traceback
@@ -63,7 +64,9 @@ def apply_fast_sor(pts, colors=None, k=16, std_ratio=1.15):
         
         filtered_pts = pts[valid]
         filtered_colors = colors[valid] if colors is not None else None
-        return filtered_pts, filtered_colors
+        if filtered_pts is not None and filtered_pts.shape[0] > 0:
+            return filtered_pts, filtered_colors
+        return pts, colors
     except Exception as e:
         print(f"[Notice] SOR filter bypass: {e}")
         return pts, colors
@@ -102,7 +105,8 @@ def to_numpy(x):
     return np.array(x)
 
 def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb",
-                           flying_edges_thr=0.06, cam_size=0.05, verbose=True):
+                           flying_edges_thr=0.06, cam_size=0.05, verbose=True,
+                           adaptive_fallback=False):
     """
     Exports a high-precision, clean 3D scene GLB/PLY free of background slices, floaters, and noise dots.
     """
@@ -118,39 +122,79 @@ def export_clean_scene_glb(outdir, scene, min_conf_thr=3.0, filename="scene.glb"
     focals_np = to_numpy(focals)
     cams2world_np = to_numpy(cams2world)
 
-    all_pts = []
-    all_cols = []
+    def _extract_points(thr, fe_thr):
+        p_list = []
+        c_list = []
+        for i in range(nimgs):
+            pts = pts3d_list[i]
+            conf = conf_list[i]
+            img = imgs_np[i]
 
-    for i in range(nimgs):
-        pts = pts3d_list[i]
-        conf = conf_list[i]
-        img = imgs_np[i]
+            mask = conf >= thr
 
-        mask = conf >= min_conf_thr
+            if img.shape[-1] == 4:
+                alpha_mask = img[:, :, 3] > 0.3
+                mask = mask & alpha_mask
 
-        if img.shape[-1] == 4:
-            alpha_mask = img[:, :, 3] > 0.3
-            mask = mask & alpha_mask
+            if fe_thr > 0.0:
+                edge_mask = filter_flying_edges(pts, conf, step_thr=fe_thr)
+                mask = mask & (~edge_mask)
 
-        if flying_edges_thr > 0.0:
-            edge_mask = filter_flying_edges(pts, conf, step_thr=flying_edges_thr)
-            mask = mask & (~edge_mask)
+            valid_pts = pts[mask]
+            valid_cols = img[mask][:, :3]
 
-        valid_pts = pts[mask]
-        valid_cols = img[mask][:, :3]
+            if len(valid_pts) > 0:
+                p_list.append(valid_pts)
+                c_list.append(valid_cols)
+        return p_list, c_list
 
-        if len(valid_pts) > 0:
-            all_pts.append(valid_pts)
-            all_cols.append(valid_cols)
+    all_pts, all_cols = _extract_points(min_conf_thr, flying_edges_thr)
+    total_pts = sum(len(p) for p in all_pts)
 
-    if not all_pts:
-        print(f"[Warning] No points met threshold {min_conf_thr}, trying fallback with min_conf_thr=1.8")
+    if (total_pts < 3000) and adaptive_fallback:
+        candidate_thrs = [2.5, 2.0, 1.8, 1.5, 1.4, 1.3, 1.2, 1.15, 1.1, 1.05, 1.0]
+        candidate_thrs = [t for t in candidate_thrs if t < min_conf_thr]
+        best_pts, best_cols, best_thr, best_count = all_pts, all_cols, min_conf_thr, total_pts
+        for fb_thr in candidate_thrs:
+            fb_pts, fb_cols = _extract_points(fb_thr, flying_edges_thr)
+            fb_count = sum(len(p) for p in fb_pts)
+            if fb_count > best_count:
+                best_pts, best_cols, best_thr, best_count = fb_pts, fb_cols, fb_thr, fb_count
+            if fb_count >= 3000:
+                if verbose:
+                    print(f"[Adaptive Threshold] Selected optimal threshold {fb_thr} ({fb_count} points)")
+                all_pts, all_cols = fb_pts, fb_cols
+                total_pts = fb_count
+                break
+        else:
+            if best_count > total_pts:
+                if verbose:
+                    print(f"[Adaptive Threshold] Selected best available threshold {best_thr} ({best_count} points)")
+                all_pts, all_cols = best_pts, best_cols
+                total_pts = best_count
+
+        if total_pts < 100:
+            for fb_thr in [1.2, 1.1, 1.05, 1.0]:
+                fb_pts, fb_cols = _extract_points(fb_thr, 0.0)
+                fb_count = sum(len(p) for p in fb_pts)
+                if fb_count > 0:
+                    if verbose:
+                        print(f"[Adaptive Threshold] Fallback to threshold {fb_thr} without edge filter ({fb_count} points)")
+                    all_pts, all_cols = fb_pts, fb_cols
+                    total_pts = fb_count
+                    break
+
+    if not all_pts or total_pts == 0:
+        if verbose:
+            print(f"[Warning] No points met threshold {min_conf_thr}")
         return None
 
     cat_pts = np.concatenate(all_pts, axis=0)
     cat_cols = np.concatenate(all_cols, axis=0)
 
     clean_pts, clean_cols = apply_fast_sor(cat_pts, cat_cols, k=16, std_ratio=1.15)
+    if clean_pts is None or len(clean_pts) == 0:
+        clean_pts, clean_cols = cat_pts, cat_cols
 
     scene_3d = trimesh.Scene()
     pct = trimesh.PointCloud(clean_pts.reshape(-1, 3), colors=clean_cols.reshape(-1, 3))
@@ -396,7 +440,26 @@ def main():
         overlap_percentile=args.overlap_percentile
     )
 
-    target_clean_conf = max(2.5, args.min_conf_thr)
+    # Analyze scene confidence distribution
+    conf_list = [scene.x_out[i]['conf'].detach().cpu().numpy() for i in range(len(scene.imgs))]
+    if conf_list:
+        flat_confs = np.concatenate([c.flatten() for c in conf_list])
+        min_c = float(np.min(flat_confs))
+        max_c = float(np.max(flat_confs))
+        p95_c = float(np.percentile(flat_confs, 95))
+        p90_c = float(np.percentile(flat_confs, 90))
+        p75_c = float(np.percentile(flat_confs, 75))
+        p50_c = float(np.percentile(flat_confs, 50))
+        print(f"[Confidence Stats] Min: {min_c:.2f}, Median: {p50_c:.2f}, 75%: {p75_c:.2f}, 90%: {p90_c:.2f}, 95%: {p95_c:.2f}, Max: {max_c:.2f}")
+    else:
+        max_c, p90_c = 1.0, 1.0
+
+    target_clean_conf = args.min_conf_thr
+    if max_c < target_clean_conf:
+        adapted = max(1.05, round(p90_c, 2))
+        print(f"[Notice] Scene max confidence ({max_c:.2f}) < requested ({target_clean_conf:.2f}). Adapting primary threshold to {adapted:.2f}")
+        target_clean_conf = adapted
+
     print(f"[Clean Exporter] Generating pristine primary model (Confidence: {target_clean_conf}, SOR: ON, Edge Filter: ON)...")
     
     primary_glb = export_clean_scene_glb(
@@ -406,7 +469,8 @@ def main():
         filename="scene.glb",
         flying_edges_thr=args.flying_edges_thr,
         cam_size=cam_size,
-        verbose=True
+        verbose=True,
+        adaptive_fallback=True
     )
     
     export_clean_scene_glb(
@@ -416,18 +480,21 @@ def main():
         filename="scene.ply",
         flying_edges_thr=args.flying_edges_thr,
         cam_size=cam_size,
-        verbose=True
+        verbose=True,
+        adaptive_fallback=True
     )
 
     precision_tiers = [
+        (5.0, "scene_5.0.glb"),
         (4.5, "scene_ultra.glb"),
         (3.5, "scene_clean.glb"),
-        (2.5, "scene_balanced.glb"),
-        (1.8, "scene_dense.glb"),
-        (5.0, "scene_5.0.glb"),
         (3.0, "scene_3.0.glb"),
+        (2.5, "scene_balanced.glb"),
         (2.0, "scene_2.0.glb"),
+        (1.8, "scene_dense.glb"),
         (1.5, "scene_1.5.glb"),
+        (1.2, "scene_1.2.glb"),
+        (1.05, "scene_1.05.glb"),
     ]
 
     for conf_val, fname in precision_tiers:
@@ -439,7 +506,8 @@ def main():
                 filename=fname,
                 flying_edges_thr=args.flying_edges_thr,
                 cam_size=cam_size,
-                verbose=False
+                verbose=False,
+                adaptive_fallback=False
             )
         except Exception:
             continue
@@ -447,24 +515,37 @@ def main():
     with open(os.path.join(args.output, "scene.pkl"), "wb") as f:
         pickle.dump(scene, f)
 
-    if primary_glb and os.path.isfile(primary_glb):
-        print(f"SUCCESS: High-precision clean 3D scene saved to {primary_glb}")
+    primary_glb_path = os.path.join(args.output, "scene.glb")
+    if os.path.isfile(primary_glb_path) and os.path.getsize(primary_glb_path) > 1000:
+        print(f"SUCCESS: High-precision clean 3D scene saved to {primary_glb_path}")
         sys.exit(0)
-    else:
-        fallback_glb = export_clean_scene_glb(
-            args.output,
-            scene,
-            min_conf_thr=2.0,
-            filename="scene.glb",
-            flying_edges_thr=0.08,
-            cam_size=cam_size,
-            verbose=True
-        )
-        if fallback_glb and os.path.isfile(fallback_glb):
-            print(f"SUCCESS: Clean 3D scene exported with fallback threshold to {fallback_glb}")
-            sys.exit(0)
-        print("[Error] Could not export 3D model from scene.", file=sys.stderr)
-        sys.exit(1)
+
+    existing_glbs = sorted(
+        [os.path.join(args.output, f) for f in os.listdir(args.output) if f.endswith(".glb") and os.path.getsize(os.path.join(args.output, f)) > 1000],
+        key=lambda p: os.path.getsize(p),
+        reverse=True
+    )
+    if existing_glbs:
+        shutil.copyfile(existing_glbs[0], primary_glb_path)
+        print(f"SUCCESS: Recovered scene.glb from {os.path.basename(existing_glbs[0])}")
+        sys.exit(0)
+
+    final_glb = export_clean_scene_glb(
+        args.output,
+        scene,
+        min_conf_thr=1.0,
+        filename="scene.glb",
+        flying_edges_thr=0.0,
+        cam_size=cam_size,
+        verbose=True,
+        adaptive_fallback=True
+    )
+    if final_glb and os.path.isfile(final_glb) and os.path.getsize(final_glb) > 1000:
+        print(f"SUCCESS: Clean 3D scene exported with base threshold to {final_glb}")
+        sys.exit(0)
+
+    print("[Error] Could not export 3D model from scene.", file=sys.stderr)
+    sys.exit(1)
 
 if __name__ == "__main__":
     main()

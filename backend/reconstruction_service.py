@@ -39,6 +39,7 @@ class JobConfig:
     render_once: bool = False
     num_mem_imgs: int = 50
     remove_background: bool = True
+    min_conf_thr: float = 1.8
 
 @dataclass
 class JobInfo:
@@ -285,7 +286,8 @@ class ReconstructionService:
             "execution_mode": cfg.execution_mode,
             "cam_size": cfg.cam_size,
             "render_once": cfg.render_once,
-            "num_mem_imgs": cfg.num_mem_imgs
+            "num_mem_imgs": cfg.num_mem_imgs,
+            "min_conf_thr": cfg.min_conf_thr
         }
 
         job = JobInfo(
@@ -585,7 +587,7 @@ class ReconstructionService:
             "--execution_mode", exec_mode,
             "--cam_size", str(cam_size),
             "--num_mem_imgs", str(num_mem_imgs),
-            "--min_conf_thr", "3.0",
+            "--min_conf_thr", str(cfg.get("min_conf_thr", 1.8)),
             "--flying_edges_thr", "0.06",
             "--file_type", "glb"
         ]
@@ -694,6 +696,16 @@ class ReconstructionService:
                 self.active_processes.pop(job_id, None)
 
             primary_glb = out_dir / "scene.glb"
+            if not (primary_glb.is_file() and primary_glb.stat().st_size > 10000):
+                existing_glbs = sorted(
+                    [g for g in out_dir.glob("*.glb") if g.stat().st_size > 10000],
+                    key=lambda p: p.stat().st_size,
+                    reverse=True
+                )
+                if existing_glbs:
+                    shutil.copyfile(existing_glbs[0], primary_glb)
+                    self._append_log(job_id, f"Recovered primary scene.glb from {existing_glbs[0].name}")
+
             has_valid_glb = primary_glb.is_file() and primary_glb.stat().st_size > 10000
 
             if return_code != 0 and not has_valid_glb:
@@ -743,12 +755,19 @@ class ReconstructionService:
             out_dir / "scene_ultra.glb",
             out_dir / "scene_balanced.glb",
             out_dir / "scene_2.5.glb",
+            out_dir / "scene_2.0.glb",
+            out_dir / "scene_dense.glb",
+            out_dir / "scene_1.5.glb",
+            out_dir / "scene_1.4.glb",
+            out_dir / "scene_1.3.glb",
+            out_dir / "scene_1.2.glb",
+            out_dir / "scene_1.05.glb",
             out_dir / "scene.glb"
         ]
 
         selected_glb = None
         for candidate in preferred_candidates:
-            if candidate.is_file() and candidate.stat().st_size > 30000:
+            if candidate.is_file() and candidate.stat().st_size > 10000:
                 selected_glb = candidate
                 break
 

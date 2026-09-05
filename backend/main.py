@@ -69,7 +69,8 @@ async def create_reconstruction_job(
     num_refinements_iterations: int = Form(8),
     execution_mode: str = Form("retrieval"),
     cam_size: float = Form(0.05),
-    remove_background: bool = Form(True)
+    remove_background: bool = Form(True),
+    min_conf_thr: float = Form(1.8)
 ):
     """
     Creates a new reconstruction job, saves validated uploaded images, and queues it.
@@ -90,7 +91,8 @@ async def create_reconstruction_job(
         num_refinements_iterations=num_refinements_iterations,
         execution_mode=execution_mode,
         cam_size=cam_size,
-        remove_background=remove_background
+        remove_background=remove_background,
+        min_conf_thr=min_conf_thr
     )
 
     job = service.create_job(config=cfg)
